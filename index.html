@@ -344,51 +344,53 @@ function loadData(){
   return null;
 }
 
-// ── CLOUD SYNC (via sync key) ────────────────────────────
-// Uses JSONBin.io as a free cloud store — user sets their own bin ID + API key
-// No server required; user owns the data bin.
-let syncTimer=null;
+// ── SYNC CODE SYSTEM ─────────────────────────────────────
+// No third-party service needed. Generate a code on one device, paste on another.
 
-async function cloudPush(){
-  if(!S.syncCfg||!S.syncCfg.binId||!S.syncCfg.apiKey)return false;
+function scheduleSync(){} // no-op, kept for compatibility
+
+function generateSyncCode(){
+  const payload={projects:S.projects,gTodos:S.gTodos,ts:Date.now(),v:1};
+  const json=JSON.stringify(payload);
+  // Base64 encode for easy copy/paste
+  const code=btoa(unescape(encodeURIComponent(json)));
+  return code;
+}
+
+function applySyncCode(code){
   try{
-    const payload={projects:S.projects,gTodos:S.gTodos,ts:Date.now()};
-    const r=await fetch(`https://api.jsonbin.io/v3/b/${S.syncCfg.binId}`,{
-      method:'PUT',headers:{'Content-Type':'application/json','X-Master-Key':S.syncCfg.apiKey},
-      body:JSON.stringify(payload)
-    });
-    if(!r.ok)throw new Error('HTTP '+r.status);
-    S.syncCfg.lastSync=new Date().toISOString();
+    const json=decodeURIComponent(escape(atob(code.trim())));
+    const payload=JSON.parse(json);
+    if(!payload.projects)throw new Error('Invalid');
+    S.projects=payload.projects;
+    S.gTodos=payload.gTodos||[];
     saveData();
+    render();
     return true;
-  }catch(e){console.warn('Push failed',e);return false;}
+  }catch(e){
+    return false;
+  }
 }
 
-async function cloudPull(){
-  if(!S.syncCfg||!S.syncCfg.binId||!S.syncCfg.apiKey)return false;
-  try{
-    const r=await fetch(`https://api.jsonbin.io/v3/b/${S.syncCfg.binId}/latest`,{
-      headers:{'X-Master-Key':S.syncCfg.apiKey}
-    });
-    if(!r.ok)throw new Error('HTTP '+r.status);
-    const data=await r.json();
-    const rec=data.record;
-    if(rec&&rec.ts){
-      S.projects=rec.projects||[];
-      S.gTodos=rec.gTodos||[];
-      saveData();
-      render();
-      return true;
-    }
-  }catch(e){console.warn('Pull failed',e);}
-  return false;
+function copySyncCode(){
+  const code=generateSyncCode();
+  // Try clipboard API first, fall back to textarea trick
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(code).then(()=>{
+      showSyncToast('Sync code copied to clipboard ✓');
+    }).catch(()=>fallbackCopy(code));
+  } else {
+    fallbackCopy(code);
+  }
 }
 
-function scheduleSync(){
-  if(syncTimer)clearTimeout(syncTimer);
-  syncTimer=setTimeout(async()=>{
-    await cloudPush();
-  },2000);
+function fallbackCopy(text){
+  const ta=document.createElement('textarea');
+  ta.value=text;ta.style.position='fixed';ta.style.opacity='0';
+  document.body.appendChild(ta);ta.select();
+  try{document.execCommand('copy');showSyncToast('Sync code copied ✓');}
+  catch(e){showSyncToast('Copy failed — use the text area below');}
+  document.body.removeChild(ta);
 }
 
 // ── EXPORT / IMPORT ───────────────────────────────────────
@@ -544,10 +546,6 @@ function initApp(){
   }
   S.view='overview';S.pid=null;
 
-  // Auto-pull from cloud if configured
-  if(S.syncCfg&&S.syncCfg.binId){
-    cloudPull().then(ok=>{if(ok)showSyncToast('Synced from cloud ✓');});
-  }
   render();
 }
 
@@ -600,44 +598,40 @@ function updateBnav(){
 
 // ── SYNC PAGE ─────────────────────────────────────────────
 function rSync(el){
-  const cfg=S.syncCfg||{};
-  const hasSync=!!(cfg.binId&&cfg.apiKey);
-  let h=`<div class="card"><div class="ctitle">📱 Install as App</div>
-    <div style="font-size:13px;color:var(--mu);line-height:1.7;margin-bottom:12px">
-      <strong style="color:var(--tx)">On iPhone / iPad (Safari):</strong><br>
-      Tap the Share button → "Add to Home Screen" → Add.<br>DealTrack opens as a full-screen app.<br><br>
-      <strong style="color:var(--tx)">On Mac (Safari or Chrome):</strong><br>
-      File → "Add to Dock" (Safari) or click the install icon in the address bar (Chrome).<br><br>
-      <strong style="color:var(--tx)">On Android (Chrome):</strong><br>
-      Tap ⋮ → "Add to Home Screen".
+  const code=generateSyncCode();
+  let h=`<div class="card">
+    <div class="ctitle">🔄 Sync Between Devices</div>
+    <div style="font-size:13px;color:var(--mu);line-height:1.7;margin-bottom:16px">
+      No account needed. Copy your sync code on this device and paste it on another device to transfer all your data instantly.
+    </div>
+
+    <div style="font-size:11px;text-transform:uppercase;letter-spacing:1.3px;color:var(--mu);margin-bottom:8px">Step 1 — On this device: Copy your sync code</div>
+    <button class="btn-p" onclick="copySyncCode()" style="width:100%;margin-bottom:10px">📋 Copy Sync Code to Clipboard</button>
+    <div style="font-size:11px;color:var(--mu2);margin-bottom:6px">Or manually select and copy the code below:</div>
+    <textarea id="sync-out" readonly style="width:100%;height:80px;background:var(--sf2);border:1px solid var(--bd);border-radius:8px;padding:10px;color:var(--mu);font-family:monospace;font-size:10px;resize:none;word-break:break-all;outline:none" onclick="this.select()">${code}</textarea>
+
+    <div style="border-top:1px solid var(--bd);margin:18px 0"></div>
+
+    <div style="font-size:11px;text-transform:uppercase;letter-spacing:1.3px;color:var(--mu);margin-bottom:8px">Step 2 — On the OTHER device: Paste your sync code</div>
+    <textarea id="sync-in" placeholder="Paste sync code here…" style="width:100%;height:80px;background:var(--sf2);border:1px solid var(--bd);border-radius:8px;padding:10px;color:var(--tx);font-family:monospace;font-size:10px;resize:none;word-break:break-all;outline:none;margin-bottom:10px"></textarea>
+    <button class="btn-p" onclick="importSyncCode()" style="width:100%;background:var(--gr);border-color:var(--gr)">✓ Apply Sync Code — Replace Data on This Device</button>
+    <div style="font-size:11px;color:var(--re);margin-top:8px">⚠ This will overwrite all data on this device with the pasted code.</div>
+  </div>`;
+
+  h+=`<div class="card"><div class="ctitle">📱 Install as App</div>
+    <div style="font-size:13px;color:var(--mu);line-height:1.7">
+      <strong style="color:var(--tx)">iPhone / iPad (Safari):</strong><br>
+      Tap Share → "Add to Home Screen" → Add<br><br>
+      <strong style="color:var(--tx)">Mac (Safari):</strong><br>
+      File → "Add to Dock"<br><br>
+      <strong style="color:var(--tx)">Mac / Windows (Chrome):</strong><br>
+      Click the install icon (⊕) in the address bar
     </div>
   </div>`;
 
-  h+=`<div class="card"><div class="ctitle" style="display:flex;justify-content:space-between;align-items:center">☁️ Cloud Sync <span style="font-size:10px;font-weight:400;color:var(--mu);background:rgba(201,169,110,.1);padding:3px 8px;border-radius:8px;border:1px solid rgba(201,169,110,.2)">Optional</span></div>
-    <div style="font-size:12.5px;color:var(--mu);line-height:1.7;margin-bottom:14px">
-      Sync across all your devices for free using <strong style="color:var(--tx)">JSONBin.io</strong>.<br>
-      1. Go to <a href="https://jsonbin.io" target="_blank" style="color:var(--gold)">jsonbin.io</a> → Create free account<br>
-      2. Create a new Bin (Private) → copy the Bin ID<br>
-      3. Go to API Keys → copy your Master Key<br>
-      4. Paste both below and tap Save & Sync
-    </div>
-    ${hasSync?`<div class="sbanner ok" style="margin-bottom:12px">✓ Cloud sync active · Last sync: ${cfg.lastSync?new Date(cfg.lastSync).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}):'Never'}</div>`:''}
-    <div class="fg"><label class="fl">JSONBin Bin ID</label>
-      <input class="finp" id="sync-binid" placeholder="e.g. 64a3f9..." value="${esc(cfg.binId||'')}"/>
-    </div>
-    <div class="fg"><label class="fl">Master API Key</label>
-      <input class="finp" id="sync-apikey" type="password" placeholder="$2a$10$..." value="${esc(cfg.apiKey||'')}"/>
-    </div>
-    <div style="display:flex;gap:8px;margin-top:10px">
-      <button class="btn-p" onclick="saveSyncCfg()" style="flex:2">Save & Sync Now</button>
-      ${hasSync?`<button class="btn-s" onclick="pullSync()" style="flex:1">Pull ↓</button>`:''}
-    </div>
-    ${hasSync?`<button onclick="clearSyncCfg()" style="background:none;border:none;color:var(--re);font-size:12px;margin-top:10px;cursor:pointer;width:100%;text-align:center">Remove sync configuration</button>`:''}
-  </div>`;
-
-  h+=`<div class="card"><div class="ctitle">💾 Manual Backup</div>
+  h+=`<div class="card"><div class="ctitle">💾 Backup</div>
     <div style="font-size:12.5px;color:var(--mu);margin-bottom:14px;line-height:1.6">
-      Export your data as a JSON file to back up or transfer to another device. Import to restore.
+      Export your data as a JSON file to back up or restore on any device.
     </div>
     <div style="display:flex;gap:8px">
       <button class="btn-p" onclick="exportData()">Export JSON</button>
@@ -647,7 +641,7 @@ function rSync(el){
   </div>`;
 
   h+=`<div class="card"><div class="ctitle">⚙️ Data Management</div>
-    <div style="font-size:12.5px;color:var(--mu);margin-bottom:14px">Data is stored locally on this device. Changing your password does not affect stored data.</div>
+    <div style="font-size:12.5px;color:var(--mu);margin-bottom:14px">Data is stored locally on this device.</div>
     <button onclick="resetPassword()" style="background:none;border:1px solid var(--bd);border-radius:8px;padding:9px 14px;color:var(--mu);font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;width:100%;margin-bottom:8px">Change Password</button>
     <button onclick="confirmWipe()" style="background:none;border:1px solid rgba(174,107,107,.3);border-radius:8px;padding:9px 14px;color:var(--re);font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;width:100%">⚠ Wipe All Data</button>
   </div>`;
@@ -655,26 +649,13 @@ function rSync(el){
   el.innerHTML=h;
 }
 
-async function saveSyncCfg(){
-  const binId=document.getElementById('sync-binid').value.trim();
-  const apiKey=document.getElementById('sync-apikey').value.trim();
-  if(!binId||!apiKey){alert('Please enter both Bin ID and API Key.');return;}
-  S.syncCfg={binId,apiKey,lastSync:null};
-  saveData();
-  const ok=await cloudPush();
-  if(ok){showSyncToast('Synced to cloud ✓');render();}
-  else{alert('Sync failed. Check your Bin ID and API Key.');}
-}
-
-async function pullSync(){
-  const ok=await cloudPull();
-  if(ok)showSyncToast('Data pulled from cloud ✓');
-  else alert('Pull failed. Check connection and credentials.');
-}
-
-function clearSyncCfg(){
-  if(!confirm('Remove cloud sync configuration?'))return;
-  S.syncCfg=null;saveData();render();
+function importSyncCode(){
+  const code=document.getElementById('sync-in').value.trim();
+  if(!code){alert('Please paste a sync code first.');return;}
+  if(!confirm('This will replace ALL data on this device with the synced data. Continue?'))return;
+  const ok=applySyncCode(code);
+  if(ok){showSyncToast('Data synced successfully ✓');}
+  else{alert('Invalid sync code. Please copy it again from the source device.');}
 }
 
 function resetPassword(){
