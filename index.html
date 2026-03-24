@@ -675,16 +675,13 @@ function rSync(el){
   let h=`<div class="card">
     <div class="ctitle">☁️ Cloud Sync</div>
     <div class="sbanner ok" style="margin-bottom:14px">✓ Supabase sync is active</div>
-    <div style="font-size:13px;color:var(--mu);line-height:1.8">
-      Your data syncs automatically across all devices.<br><br>
-      <strong style="color:var(--tx)">How it works:</strong><br>
-      • Every change saves to the cloud within 2 seconds<br>
-      • Every time you open DealTrack it pulls the latest data<br>
-      • Works on laptop, iPhone and iPad simultaneously<br><br>
-      <strong style="color:var(--tx)">If you just made changes on another device:</strong><br>
-      Tap the button below to pull the latest data now.
+    <div style="font-size:13px;color:var(--mu);line-height:1.8;margin-bottom:14px">
+      Every change saves to the cloud automatically within 2 seconds.<br>
+      Open on any device and it pulls the latest data on load.<br><br>
+      <strong style="color:var(--tx)">If data is missing — tap the button below:</strong>
     </div>
-    <button class="btn-p" onclick="manualPull()" style="width:100%;margin-top:14px">⟳ Pull Latest Data Now</button>
+    <button class="btn-p" onclick="manualPull()" style="width:100%;margin-bottom:10px">⟳ Pull Latest Data Now</button>
+    <div id="sync-debug" style="background:var(--sf2);border:1px solid var(--bd);border-radius:8px;padding:10px;font-size:11px;font-family:monospace;color:var(--mu);min-height:40px;word-break:break-all;white-space:pre-wrap">Tap "Pull Latest Data Now" to see debug info…</div>
   </div>`;
 
   h+=`<div class="card"><div class="ctitle">📱 Install as App</div>
@@ -719,16 +716,37 @@ function rSync(el){
 }
 
 async function manualPull(){
-  showSyncToast('⟳ Pulling from cloud…');
-  const cloud=await sbPull();
-  if(cloud&&cloud.projects){
-    S.projects=cloud.projects;
-    S.gTodos=cloud.gTodos||[];
-    saveData();
-    render();
-    showSyncToast('✓ Data updated from cloud');
-  } else {
-    showSyncToast('✗ Could not reach cloud');
+  const dbg=document.getElementById('sync-debug');
+  if(dbg)dbg.textContent='Connecting to Supabase…';
+  try{
+    const url=`${SB_URL}/rest/v1/dealtrack?id=eq.1&select=data`;
+    if(dbg)dbg.textContent='GET '+url+'\n\nFetching…';
+    const r=await fetch(url,{headers:SB_HEADERS});
+    const status=r.status;
+    const text=await r.text();
+    if(dbg)dbg.textContent=`Status: ${status}\nResponse: ${text.substring(0,300)}`;
+    if(!r.ok){
+      showSyncToast('✗ HTTP '+status);
+      return;
+    }
+    const rows=JSON.parse(text);
+    if(rows&&rows.length>0&&rows[0].data){
+      const cloud=JSON.parse(rows[0].data);
+      if(cloud&&cloud.projects){
+        S.projects=cloud.projects;
+        S.gTodos=cloud.gTodos||[];
+        saveData();
+        render();
+        showSyncToast('✓ '+cloud.projects.length+' mandates loaded');
+        if(dbg)dbg.textContent=`✓ Success! Loaded ${cloud.projects.length} mandates.\nTimestamp: ${new Date(cloud.ts).toLocaleString()}`;
+      }
+    } else {
+      if(dbg)dbg.textContent=`No data found in row.\nRaw: ${text.substring(0,200)}`;
+      showSyncToast('✗ No data in cloud');
+    }
+  }catch(e){
+    if(dbg)dbg.textContent='Error: '+e.message;
+    showSyncToast('✗ Network error');
   }
 }
 
