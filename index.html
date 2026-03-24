@@ -405,10 +405,6 @@ function loadData(){
 }
 
 // ── SYNC CODE SYSTEM ─────────────────────────────────────
-// No third-party service needed. Generate a code on one device, paste on another.
-
-function scheduleSync(){} // no-op, kept for compatibility
-
 function generateSyncCode(){
   const payload={projects:S.projects,gTodos:S.gTodos,ts:Date.now(),v:1};
   const json=JSON.stringify(payload);
