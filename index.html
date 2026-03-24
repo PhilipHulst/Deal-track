@@ -356,9 +356,13 @@ async function sbPush(data){
 
 async function sbPull(){
   try{
+    const controller=new AbortController();
+    const timeout=setTimeout(()=>controller.abort(),8000);
     const r=await fetch(`${SB_URL}/rest/v1/dealtrack?id=eq.1&select=data`,{
-      headers:SB_HEADERS
+      headers:SB_HEADERS,
+      signal:controller.signal
     });
+    clearTimeout(timeout);
     if(!r.ok){console.warn('sbPull HTTP',r.status);return null;}
     const rows=await r.json();
     console.log('sbPull rows:',rows);
@@ -366,7 +370,7 @@ async function sbPull(){
       return JSON.parse(rows[0].data);
     }
     return null;
-  }catch(e){console.warn('sbPull error',e);return null;}
+  }catch(e){console.warn('sbPull error',e.message);return null;}
 }
 
 let syncTimer=null;
@@ -717,14 +721,24 @@ function rSync(el){
 
 async function manualPull(){
   const dbg=document.getElementById('sync-debug');
-  if(dbg)dbg.textContent='Connecting to Supabase…';
+  if(dbg)dbg.textContent='Connecting…';
   try{
+    const controller=new AbortController();
+    const timeout=setTimeout(()=>{
+      controller.abort();
+      if(dbg)dbg.textContent='❌ Timed out after 8 seconds.\nSupabase URL is reachable but not responding to authenticated requests.\nTry again or check Supabase project status.';
+    },8000);
     const url=`${SB_URL}/rest/v1/dealtrack?id=eq.1&select=data`;
-    if(dbg)dbg.textContent='GET '+url+'\n\nFetching…';
-    const r=await fetch(url,{headers:SB_HEADERS});
+    if(dbg)dbg.textContent='Sending request…';
+    const r=await fetch(url,{
+      method:'GET',
+      headers:SB_HEADERS,
+      signal:controller.signal
+    });
+    clearTimeout(timeout);
     const status=r.status;
     const text=await r.text();
-    if(dbg)dbg.textContent=`Status: ${status}\nResponse: ${text.substring(0,300)}`;
+    if(dbg)dbg.textContent=`Status: ${status}\nResponse: ${text.substring(0,400)}`;
     if(!r.ok){
       showSyncToast('✗ HTTP '+status);
       return;
@@ -738,15 +752,19 @@ async function manualPull(){
         saveData();
         render();
         showSyncToast('✓ '+cloud.projects.length+' mandates loaded');
-        if(dbg)dbg.textContent=`✓ Success! Loaded ${cloud.projects.length} mandates.\nTimestamp: ${new Date(cloud.ts).toLocaleString()}`;
+        if(dbg)dbg.textContent=`✓ Success! ${cloud.projects.length} mandates loaded.\nLast saved: ${new Date(cloud.ts).toLocaleString()}`;
       }
     } else {
-      if(dbg)dbg.textContent=`No data found in row.\nRaw: ${text.substring(0,200)}`;
+      if(dbg)dbg.textContent=`No data found.\nRaw response: ${text.substring(0,200)}`;
       showSyncToast('✗ No data in cloud');
     }
   }catch(e){
-    if(dbg)dbg.textContent='Error: '+e.message;
-    showSyncToast('✗ Network error');
+    if(e.name==='AbortError'){
+      if(dbg)dbg.textContent='❌ Request timed out (8s).\nPhone reached Supabase but got no response.\nThis may be a Supabase free tier cold start — try again in 30 seconds.';
+    } else {
+      if(dbg)dbg.textContent='❌ Error: '+e.message;
+    }
+    showSyncToast('✗ '+e.message);
   }
 }
 
