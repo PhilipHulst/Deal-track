@@ -328,11 +328,63 @@ function initLock(){
 function unlock(){pin='';sp1='';sphase=1;document.getElementById('lock').style.display='none';document.getElementById('app').classList.add('show');initApp();}
 function lockApp(){document.getElementById('app').classList.remove('show');document.getElementById('lock').style.display='flex';initLock();}
 
+// ── SUPABASE CONFIG ───────────────────────────────────────
+const SB_URL='https://gnuijizwmmzgctggexdg.supabase.co';
+const SB_KEY='sb_publishable_bwkz1pfvBX8K6v5GRF0HPg_FyZSOdLb';
+const SB_ROW_ID=1; // We always use row 1 — one row holds all data
+
+async function sbPush(data){
+  try{
+    // Try update first, then insert if not exists
+    const r=await fetch(`${SB_URL}/rest/v1/dealtrack?id=eq.${SB_ROW_ID}`,{
+      method:'PATCH',
+      headers:{'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Prefer':'return=minimal'},
+      body:JSON.stringify({data:JSON.stringify(data)})
+    });
+    if(r.status===404||r.status===406||(r.ok&&r.status===204)){
+      // If no rows updated, insert
+      const count=await fetch(`${SB_URL}/rest/v1/dealtrack?id=eq.${SB_ROW_ID}`,{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}});
+      const rows=await count.json();
+      if(!rows||rows.length===0){
+        await fetch(`${SB_URL}/rest/v1/dealtrack`,{
+          method:'POST',
+          headers:{'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Prefer':'return=minimal'},
+          body:JSON.stringify({id:SB_ROW_ID,data:JSON.stringify(data)})
+        });
+      }
+    }
+    return true;
+  }catch(e){console.warn('Supabase push failed',e);return false;}
+}
+
+async function sbPull(){
+  try{
+    const r=await fetch(`${SB_URL}/rest/v1/dealtrack?id=eq.${SB_ROW_ID}&select=data`,{
+      headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}
+    });
+    if(!r.ok)return null;
+    const rows=await r.json();
+    if(rows&&rows.length>0&&rows[0].data){
+      return JSON.parse(rows[0].data);
+    }
+    return null;
+  }catch(e){console.warn('Supabase pull failed',e);return null;}
+}
+
+let syncTimer=null;
+function scheduleSync(){
+  if(syncTimer)clearTimeout(syncTimer);
+  syncTimer=setTimeout(async()=>{
+    const ok=await sbPush({projects:S.projects,gTodos:S.gTodos,ts:Date.now()});
+    if(ok)showSyncToast('☁ Saved to cloud');
+  },2000);
+}
+
 // ── PERSISTENCE ─────────────────────────────────────────
 const DATA_KEY='dt_data_v3';
 
 function saveData(){
-  try{localStorage.setItem(DATA_KEY,JSON.stringify({projects:S.projects,gTodos:S.gTodos,banner:S.banner,syncCfg:S.syncCfg}));}
+  try{localStorage.setItem(DATA_KEY,JSON.stringify({projects:S.projects,gTodos:S.gTodos,banner:S.banner,ts:Date.now()}));}
   catch(e){console.warn('Save failed',e);}
 }
 
@@ -526,14 +578,15 @@ function gp(){return S.projects.find(p=>p.id===S.pid);}
 function up(proj){S.projects=S.projects.map(p=>p.id===proj.id?proj:p);saveData();scheduleSync();render();}
 
 // ── INIT ──────────────────────────────────────────────────
-function initApp(){
-  // Try to load from localStorage first
+async function initApp(){
+  S.view='overview';S.pid=null;
+
+  // 1. Load local data immediately so app is usable right away
   const saved=loadData();
   if(saved&&saved.projects&&saved.projects.length>0){
     S.projects=saved.projects;
     S.gTodos=saved.gTodos||[];
     S.banner=saved.banner!==undefined?saved.banner:true;
-    S.syncCfg=saved.syncCfg||null;
   } else {
     // First run — seed with demo data
     S.projects=[
@@ -544,9 +597,27 @@ function initApp(){
     S.gTodos=[];
     saveData();
   }
-  S.view='overview';S.pid=null;
-
   render();
+
+  // 2. Then pull from Supabase in background — if cloud is newer, update
+  showSyncToast('⟳ Syncing from cloud…');
+  const cloud=await sbPull();
+  if(cloud&&cloud.ts){
+    const localTs=saved&&saved.ts?saved.ts:0;
+    if(cloud.ts>localTs){
+      S.projects=cloud.projects||[];
+      S.gTodos=cloud.gTodos||[];
+      saveData();
+      render();
+      showSyncToast('✓ Synced from cloud');
+    } else {
+      showSyncToast('✓ Up to date');
+    }
+  } else {
+    // No cloud data yet — push local data up
+    await sbPush({projects:S.projects,gTodos:S.gTodos,ts:Date.now()});
+    showSyncToast('☁ Data backed up to cloud');
+  }
 }
 
 function showSyncToast(msg){
@@ -589,7 +660,7 @@ function updateTopbar(){
   else if(S.view==='projects'){t.textContent='Mandates';s.textContent=S.projects.length+' active mandates';}
   else if(S.view==='sync'){t.textContent='Sync & Settings';s.textContent='Data management';}
   else{t.textContent='DealTrack';s.innerHTML='M&amp;A Advisory Suite';}
-  if(sb)sb.style.color=S.syncCfg&&S.syncCfg.binId?'var(--gr)':'var(--mu)';
+  if(sb)sb.style.color='var(--gr)';
 }
 
 function updateBnav(){
@@ -598,24 +669,19 @@ function updateBnav(){
 
 // ── SYNC PAGE ─────────────────────────────────────────────
 function rSync(el){
-  const code=generateSyncCode();
   let h=`<div class="card">
-    <div class="ctitle">🔄 Sync Between Devices</div>
-    <div style="font-size:13px;color:var(--mu);line-height:1.7;margin-bottom:16px">
-      No account needed. Copy your sync code on this device and paste it on another device to transfer all your data instantly.
+    <div class="ctitle">☁️ Cloud Sync</div>
+    <div class="sbanner ok" style="margin-bottom:14px">✓ Supabase sync is active</div>
+    <div style="font-size:13px;color:var(--mu);line-height:1.8">
+      Your data syncs automatically across all devices.<br><br>
+      <strong style="color:var(--tx)">How it works:</strong><br>
+      • Every change saves to the cloud within 2 seconds<br>
+      • Every time you open DealTrack it pulls the latest data<br>
+      • Works on laptop, iPhone and iPad simultaneously<br><br>
+      <strong style="color:var(--tx)">If you just made changes on another device:</strong><br>
+      Tap the button below to pull the latest data now.
     </div>
-
-    <div style="font-size:11px;text-transform:uppercase;letter-spacing:1.3px;color:var(--mu);margin-bottom:8px">Step 1 — On this device: Copy your sync code</div>
-    <button class="btn-p" onclick="copySyncCode()" style="width:100%;margin-bottom:10px">📋 Copy Sync Code to Clipboard</button>
-    <div style="font-size:11px;color:var(--mu2);margin-bottom:6px">Or manually select and copy the code below:</div>
-    <textarea id="sync-out" readonly style="width:100%;height:80px;background:var(--sf2);border:1px solid var(--bd);border-radius:8px;padding:10px;color:var(--mu);font-family:monospace;font-size:10px;resize:none;word-break:break-all;outline:none" onclick="this.select()">${code}</textarea>
-
-    <div style="border-top:1px solid var(--bd);margin:18px 0"></div>
-
-    <div style="font-size:11px;text-transform:uppercase;letter-spacing:1.3px;color:var(--mu);margin-bottom:8px">Step 2 — On the OTHER device: Paste your sync code</div>
-    <textarea id="sync-in" placeholder="Paste sync code here…" style="width:100%;height:80px;background:var(--sf2);border:1px solid var(--bd);border-radius:8px;padding:10px;color:var(--tx);font-family:monospace;font-size:10px;resize:none;word-break:break-all;outline:none;margin-bottom:10px"></textarea>
-    <button class="btn-p" onclick="importSyncCode()" style="width:100%;background:var(--gr);border-color:var(--gr)">✓ Apply Sync Code — Replace Data on This Device</button>
-    <div style="font-size:11px;color:var(--re);margin-top:8px">⚠ This will overwrite all data on this device with the pasted code.</div>
+    <button class="btn-p" onclick="manualPull()" style="width:100%;margin-top:14px">⟳ Pull Latest Data Now</button>
   </div>`;
 
   h+=`<div class="card"><div class="ctitle">📱 Install as App</div>
@@ -631,7 +697,7 @@ function rSync(el){
 
   h+=`<div class="card"><div class="ctitle">💾 Backup</div>
     <div style="font-size:12.5px;color:var(--mu);margin-bottom:14px;line-height:1.6">
-      Export your data as a JSON file to back up or restore on any device.
+      Export your data as a JSON file as an extra backup.
     </div>
     <div style="display:flex;gap:8px">
       <button class="btn-p" onclick="exportData()">Export JSON</button>
@@ -641,21 +707,26 @@ function rSync(el){
   </div>`;
 
   h+=`<div class="card"><div class="ctitle">⚙️ Data Management</div>
-    <div style="font-size:12.5px;color:var(--mu);margin-bottom:14px">Data is stored locally on this device.</div>
+    <div style="font-size:12.5px;color:var(--mu);margin-bottom:14px">Data is stored locally and in the cloud.</div>
     <button onclick="resetPassword()" style="background:none;border:1px solid var(--bd);border-radius:8px;padding:9px 14px;color:var(--mu);font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;width:100%;margin-bottom:8px">Change Password</button>
-    <button onclick="confirmWipe()" style="background:none;border:1px solid rgba(174,107,107,.3);border-radius:8px;padding:9px 14px;color:var(--re);font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;width:100%">⚠ Wipe All Data</button>
+    <button onclick="confirmWipe()" style="background:none;border:1px solid rgba(174,107,107,.3);border-radius:8px;padding:9px 14px;color:var(--re);font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;width:100%">⚠ Wipe All Local Data</button>
   </div>`;
 
   el.innerHTML=h;
 }
 
-function importSyncCode(){
-  const code=document.getElementById('sync-in').value.trim();
-  if(!code){alert('Please paste a sync code first.');return;}
-  if(!confirm('This will replace ALL data on this device with the synced data. Continue?'))return;
-  const ok=applySyncCode(code);
-  if(ok){showSyncToast('Data synced successfully ✓');}
-  else{alert('Invalid sync code. Please copy it again from the source device.');}
+async function manualPull(){
+  showSyncToast('⟳ Pulling from cloud…');
+  const cloud=await sbPull();
+  if(cloud&&cloud.projects){
+    S.projects=cloud.projects;
+    S.gTodos=cloud.gTodos||[];
+    saveData();
+    render();
+    showSyncToast('✓ Data updated from cloud');
+  } else {
+    showSyncToast('✗ Could not reach cloud');
+  }
 }
 
 function resetPassword(){
