@@ -1,0 +1,1112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="DealTrack"/>
+<meta name="theme-color" content="#0F1117"/>
+<title>DealTrack</title>
+<!-- PWA Manifest inline -->
+<link rel="manifest" href="data:application/manifest+json,%7B%22name%22%3A%22DealTrack%22%2C%22short_name%22%3A%22DealTrack%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%230F1117%22%2C%22theme_color%22%3A%22%230F1117%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22data%3Aimage%2Fsvg%2Bxml%2C%253Csvg%2520xmlns%253D%2527http%253A%252F%252Fwww.w3.org%252F2000%252Fsvg%2527%2520viewBox%253D%25270%25200%2520192%2520192%2527%253E%253Crect%2520width%253D%2527192%2527%2520height%253D%2527192%2527%2520rx%253D%252740%2527%2520fill%253D%2527%25230F1117%2527%252F%253E%253Ctext%2520x%253D%252796%2527%2520y%253D%2527135%2527%2520text-anchor%253D%2527middle%2527%2520font-size%253D%2527120%2527%253ED%253C%252Ftext%253E%253C%252Fsvg%253E%22%2C%22sizes%22%3A%22192x192%22%2C%22type%22%3A%22image%2Fsvg%2Bxml%22%7D%5D%7D"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#0F1117;--sf:#161A24;--sf2:#1C2130;
+  --bd:rgba(255,255,255,0.08);--bd2:rgba(255,255,255,0.15);
+  --gold:#C9A96E;--gold-l:#E2C98A;
+  --tx:#E8E4DC;--mu:#8A8E9A;--mu2:#555B6E;
+  --gr:#7B9E87;--bl:#6B8CAE;--pu:#9B7B9E;--re:#AE6B6B;--fm:#A67B9E;
+  --r:14px;--rs:10px;
+  --safe-t:env(safe-area-inset-top,0px);
+  --safe-b:env(safe-area-inset-bottom,0px);
+}
+html,body{height:100%;background:var(--bg);color:var(--tx);font-family:'DM Sans',sans-serif;font-size:15px;overflow:hidden}
+#root{height:100%}
+
+/* LOCK */
+#lock{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 28px;gap:0}
+.lk-logo{font-family:'Playfair Display',serif;font-size:34px;color:var(--gold);margin-bottom:4px}
+.lk-sub{font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--mu);margin-bottom:44px}
+.lk-label{font-size:12px;color:var(--mu);letter-spacing:1px;text-transform:uppercase;margin-bottom:18px}
+.dots{display:flex;gap:14px;margin-bottom:28px}
+.dot{width:13px;height:13px;border-radius:50%;border:2px solid var(--mu2);transition:all .2s}
+.dot.f{background:var(--gold);border-color:var(--gold);transform:scale(1.2)}
+.dot.e{background:var(--re);border-color:var(--re)}
+.numpad{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;width:100%;max-width:290px}
+.nk{background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);padding:18px 10px;font-family:'DM Sans',sans-serif;font-size:22px;color:var(--tx);cursor:pointer;text-align:center;-webkit-user-select:none;user-select:none;transition:all .1s}
+.nk:active{background:var(--sf2);transform:scale(.93)}
+.nk.del{font-size:17px;color:var(--mu)}
+.nk.empty{opacity:0;pointer-events:none}
+.lk-err{font-size:12px;color:var(--re);margin-top:14px;min-height:18px}
+.lk-hint{font-size:11px;color:var(--mu2);margin-top:20px;text-align:center;line-height:1.8}
+
+/* APP */
+#app{display:none;flex-direction:column;height:100%}
+#app.show{display:flex}
+.topbar{background:var(--sf);border-bottom:1px solid var(--bd);padding:calc(var(--safe-t) + 12px) 16px 12px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.tb-left h1{font-family:'Playfair Display',serif;font-size:17px;color:var(--gold);line-height:1.2}
+.tb-left p{font-size:11px;color:var(--mu);margin-top:2px}
+.tb-right{display:flex;gap:8px}
+.ib{background:none;border:1px solid var(--bd);border-radius:8px;padding:7px;color:var(--mu);cursor:pointer;display:flex;align-items:center;transition:all .15s}
+.ib:active{background:var(--sf2)}
+.ib.gold{color:var(--gold);border-color:rgba(201,169,110,.35)}
+.scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.content{padding:14px 14px calc(var(--safe-b) + 86px)}
+
+/* BOTTOM NAV */
+.bnav{position:fixed;bottom:0;left:0;right:0;background:var(--sf);border-top:1px solid var(--bd);display:flex;padding:8px 0 calc(var(--safe-b) + 4px);z-index:50}
+.bni{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:3px;color:var(--mu);transition:color .15s;position:relative}
+.bni.on{color:var(--gold)}
+.bni svg{width:22px;height:22px}
+.bni-lbl{font-size:10px}
+.bni-badge{position:absolute;top:0;right:calc(50% - 22px);background:var(--re);color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:8px;min-width:16px;text-align:center}
+
+/* TABS */
+.tab-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;background:var(--sf2);border-bottom:1px solid var(--bd);flex-shrink:0}
+.tab-wrap::-webkit-scrollbar{display:none}
+.tab-row{display:flex;padding:5px 8px;gap:3px;width:max-content}
+.tbtn{padding:7px 13px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:12.5px;color:var(--mu);cursor:pointer;white-space:nowrap;border:none;background:none;transition:all .15s}
+.tbtn.on{background:var(--sf);color:var(--gold);font-weight:600}
+
+/* CARDS */
+.card{background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);padding:15px;margin-bottom:12px}
+.ctitle{font-family:'Playfair Display',serif;font-size:15px;margin-bottom:14px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.kpi{background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);padding:13px 14px}
+.kl{font-size:10px;text-transform:uppercase;letter-spacing:1.3px;color:var(--mu);margin-bottom:7px}
+.kv{font-family:'Playfair Display',serif;font-size:21px}
+.ks{font-size:11px;color:var(--mu);margin-top:3px}
+
+/* PROJECTS */
+.proj-card{background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);padding:14px;margin-bottom:10px;cursor:pointer;transition:border-color .15s}
+.proj-card:active{border-color:rgba(201,169,110,.4)}
+.proj-nm{font-weight:600;font-size:14px;margin-bottom:3px}
+.proj-meta{font-size:11.5px;color:var(--mu);display:flex;justify-content:space-between;margin-bottom:8px}
+.pbar{height:3px;background:var(--bd2);border-radius:2px}
+.pfill{height:100%;background:var(--gold);border-radius:2px}
+.pprofit{font-size:11px;font-weight:600;margin-top:6px}
+
+/* TIMELINE */
+.ph-hdr{display:flex;align-items:center;gap:8px;margin:16px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--bd)}
+.ph-dot{width:7px;height:7px;border-radius:50%}
+.ph-nm{font-family:'Playfair Display',serif;font-size:13px}
+.ms-item{display:flex;gap:12px;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--bd)}
+.ms-item:last-child{border-bottom:none;padding-bottom:0;margin-bottom:0}
+.ms-dot{width:30px;height:30px;border-radius:50%;border:2px solid;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;margin-top:2px}
+.ms-body{flex:1;min-width:0}
+.ms-nm{font-size:13px;font-weight:500;line-height:1.4}
+.ms-dt{font-size:11px;color:var(--mu);margin-top:3px;margin-bottom:4px}
+.sel{width:100%;appearance:none;background:var(--sf2);border:1px solid var(--bd);border-radius:8px;padding:8px 12px;color:var(--tx);font-family:'DM Sans',sans-serif;font-size:13px;outline:none;margin-top:8px}
+.inp{width:100%;background:var(--sf2);border:1px solid var(--bd);border-radius:8px;padding:8px 12px;color:var(--tx);font-family:'DM Sans',sans-serif;font-size:13px;outline:none;margin-top:6px}
+.sel:focus,.inp:focus{border-color:var(--gold)}
+.date-inp{background:var(--sf2);border:1px solid var(--bd);border-radius:8px;padding:6px 10px;color:var(--tx);font-family:'DM Sans',sans-serif;font-size:12px;outline:none;margin-top:6px;width:100%}
+.date-inp:focus{border-color:var(--gold)}
+
+/* FM */
+.fm-st{font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--fm);margin:14px 0 8px;padding-bottom:5px;border-bottom:1px solid rgba(166,123,158,.2)}
+.fmi{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.04);cursor:pointer}
+.fmi:last-child{border-bottom:none}
+.fmcb{width:18px;height:18px;border-radius:5px;border:1.5px solid var(--bd2);flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .15s;margin-top:1px}
+.fmcb.on{background:var(--fm);border-color:var(--fm)}
+.fmtx{font-size:13px;line-height:1.4}
+.fmtx.dn{color:var(--mu);text-decoration:line-through}
+.pbar2{height:5px;background:var(--bd2);border-radius:3px;margin-bottom:14px}
+.pfill2{height:100%;border-radius:3px;transition:width .4s}
+
+/* BUDGET */
+.bkpi{background:var(--sf2);border-radius:10px;padding:12px 13px}
+.bkl{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--mu);margin-bottom:5px}
+.bkv{font-family:'Playfair Display',serif;font-size:19px}
+.fee-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--bd)}
+.fee-row:last-child{border-bottom:none}
+.fee-nm{font-size:13px;flex:1;padding-right:8px}
+.fee-val{font-family:'Playfair Display',serif;font-size:14px;color:var(--gold)}
+.ti{background:var(--sf2);border:1px solid var(--bd);border-radius:8px;padding:6px 9px;color:var(--tx);font-family:'DM Sans',sans-serif;font-size:13px;outline:none;text-align:right}
+.ti:focus{border-color:var(--gold)}
+.team-row{display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--bd)}
+.team-row:last-child{border-bottom:none}
+
+/* TODOS */
+.todo-wrap{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
+.todo-row{display:flex;gap:8px}
+.todo-inp{flex:1;background:var(--sf2);border:1px solid var(--bd);border-radius:8px;padding:10px 12px;color:var(--tx);font-family:'DM Sans',sans-serif;font-size:14px;outline:none}
+.todo-inp:focus{border-color:var(--gold)}
+.todo-add{background:var(--gold);border:none;border-radius:8px;padding:10px 15px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;color:#0F1117;cursor:pointer;flex-shrink:0}
+.todo-add:active{background:var(--gold-l)}
+.todo-sels{display:flex;gap:8px}
+.tsel{flex:1;background:var(--sf2);border:1px solid var(--bd);border-radius:8px;padding:8px 10px;color:var(--tx);font-family:'DM Sans',sans-serif;font-size:13px;outline:none}
+.td-item{display:flex;align-items:flex-start;gap:11px;padding:11px 12px;background:var(--sf2);border-radius:10px;margin-bottom:7px;border-left:3px solid transparent}
+.td-item.fd{opacity:.45}
+.td-chk{width:20px;height:20px;border-radius:50%;border:2px solid var(--bd2);flex-shrink:0;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;margin-top:1px}
+.td-chk.on{background:var(--gr);border-color:var(--gr)}
+.td-body{flex:1;min-width:0}
+.td-tx{font-size:13.5px;line-height:1.4}
+.td-tx.st{text-decoration:line-through;color:var(--mu)}
+.td-mt{display:flex;gap:5px;flex-wrap:wrap;margin-top:5px;align-items:center}
+.td-del{background:none;border:none;color:var(--mu);font-size:19px;cursor:pointer;padding:2px;flex-shrink:0}
+.td-pin{background:none;border:none;font-size:13px;cursor:pointer;padding:2px;flex-shrink:0}
+.pri-b{display:inline-flex;padding:2px 8px;border-radius:12px;font-size:10px;font-weight:600}
+.ptag{display:inline-flex;padding:2px 8px;border-radius:4px;font-size:10px;background:rgba(201,169,110,.1);color:var(--gold);border:1px solid rgba(201,169,110,.2)}
+.sec-lbl{font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--mu2);margin:14px 0 8px}
+.badge{display:inline-flex;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:500}
+.profit-chip{display:inline-flex;align-items:center;padding:4px 11px;border-radius:20px;font-size:11.5px;font-weight:600}
+.empty{text-align:center;padding:28px 16px;color:var(--mu);font-size:13.5px;line-height:1.7}
+.back-btn{display:flex;align-items:center;gap:6px;color:var(--mu);font-size:12px;cursor:pointer;margin-bottom:10px;-webkit-user-select:none;user-select:none;padding:4px 0}
+
+/* SYNC PANEL */
+.sync-row{display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--bd)}
+.sync-row:last-child{border-bottom:none}
+.sync-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.sync-dot.ok{background:var(--gr)}
+.sync-dot.err{background:var(--re)}
+.sync-dot.warn{background:var(--gold)}
+
+/* GANTT */
+.gwrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.gwrap::-webkit-scrollbar{display:none}
+.ghdr{display:flex;border-bottom:1px solid var(--bd)}
+.ghlbl{width:130px;flex-shrink:0;font-size:9px;color:var(--mu);padding:5px 7px}
+.ghmos{flex:1;display:flex}
+.ghmo{flex:1;font-size:9px;color:var(--mu);text-align:center;padding:4px 1px;border-left:1px solid var(--bd)}
+.grow{display:flex;align-items:center;border-bottom:1px solid rgba(255,255,255,.04)}
+.gnm{width:130px;flex-shrink:0;font-size:11px;padding:6px 7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.garea{flex:1;position:relative;height:26px}
+.gbar{position:absolute;top:4px;height:18px;border-radius:4px;min-width:5px}
+.gph{font-size:9px;text-transform:uppercase;letter-spacing:.8px;padding:4px 7px;background:rgba(255,255,255,.02)}
+
+/* MODAL */
+.movl{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;display:flex;align-items:flex-end}
+.msheet{background:var(--sf);border-radius:20px 20px 0 0;padding:18px 18px calc(var(--safe-b)+18px);width:100%;max-height:88vh;overflow-y:auto}
+.mhandle{width:36px;height:4px;background:var(--bd2);border-radius:2px;margin:0 auto 16px}
+.mtitle{font-family:'Playfair Display',serif;font-size:20px;margin-bottom:16px}
+.fg{margin-bottom:13px}
+.fl{font-size:11px;color:var(--mu);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px}
+.finp{width:100%;background:var(--sf2);border:1px solid var(--bd);border-radius:10px;padding:12px;color:var(--tx);font-family:'DM Sans',sans-serif;font-size:15px;outline:none}
+.finp:focus{border-color:var(--gold)}
+.mact{display:flex;gap:10px;margin-top:18px}
+.btn-p{flex:1;background:var(--gold);border:none;border-radius:10px;padding:14px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:600;color:#0F1117;cursor:pointer}
+.btn-p:active{background:var(--gold-l)}
+.btn-s{flex:1;background:transparent;border:1px solid var(--bd);border-radius:10px;padding:14px;font-family:'DM Sans',sans-serif;font-size:15px;color:var(--mu);cursor:pointer}
+.btn-danger{flex:1;background:transparent;border:1px solid rgba(174,107,107,.4);border-radius:10px;padding:14px;font-family:'DM Sans',sans-serif;font-size:15px;color:var(--re);cursor:pointer}
+
+/* INSTALL BANNER */
+.ibanner{background:linear-gradient(135deg,rgba(201,169,110,.1),rgba(201,169,110,.05));border:1px solid rgba(201,169,110,.25);border-radius:12px;padding:12px 14px;margin-bottom:12px;display:flex;gap:10px;align-items:flex-start}
+.ibanner-txt{flex:1;font-size:12.5px;line-height:1.5}
+.ibanner-x{background:none;border:none;color:var(--mu);font-size:18px;cursor:pointer;line-height:1;padding:0;flex-shrink:0;margin-top:-2px}
+
+/* SYNC BANNER */
+.sbanner{border-radius:12px;padding:12px 14px;margin-bottom:12px;display:flex;gap:10px;align-items:center;font-size:12.5px}
+.sbanner.info{background:rgba(107,140,174,.1);border:1px solid rgba(107,140,174,.3);color:var(--bl)}
+.sbanner.ok{background:rgba(123,158,135,.1);border:1px solid rgba(123,158,135,.3);color:var(--gr)}
+.sbanner.err{background:rgba(174,107,107,.1);border:1px solid rgba(174,107,107,.3);color:var(--re)}
+
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:3px}
+
+/* delete project btn */
+.delete-proj-btn{background:none;border:1px solid rgba(174,107,107,.3);border-radius:8px;padding:5px 10px;color:var(--re);font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer}
+</style>
+</head>
+<body>
+<div id="root">
+
+<!-- LOCK SCREEN -->
+<div id="lock">
+  <div class="lk-logo">DealTrack</div>
+  <div class="lk-sub">M&amp;A Advisory Suite</div>
+  <div class="lk-label" id="lk-lbl">Enter your password</div>
+  <div class="dots" id="dots"></div>
+  <div class="numpad" id="numpad"></div>
+  <div class="lk-err" id="lk-err"></div>
+  <div class="lk-hint" id="lk-hint"></div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="topbar">
+    <div class="tb-left">
+      <h1 id="tb-title">DealTrack</h1>
+      <p id="tb-sub">M&amp;A Advisory Suite</p>
+    </div>
+    <div class="tb-right">
+      <button class="ib" id="sync-btn" onclick="sv('sync')" title="Sync / Settings">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6M3 22v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L21 8M3 16l2.64 2.36A9 9 0 0 0 20.49 15"/></svg>
+      </button>
+      <button class="ib gold" id="add-btn" style="display:none" onclick="openNewProjModal()">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+      </button>
+      <button class="ib" onclick="lockApp()" title="Lock">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M19 11H5a2 2 0 00-2 2v7a2 2 0 002 2h14a2 2 0 002-2v-7a2 2 0 00-2-2zM7 11V7a5 5 0 0110 0v4"/></svg>
+      </button>
+    </div>
+  </div>
+  <div id="tab-wrap" class="tab-wrap" style="display:none">
+    <div class="tab-row" id="tab-row"></div>
+  </div>
+  <div class="scroll">
+    <div class="content" id="content"></div>
+  </div>
+  <div class="bnav">
+    <div class="bni on" id="bn-overview" onclick="sv('overview')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><path d="M9 22V12h6v10"/></svg>
+      <span class="bni-lbl">Overview</span>
+    </div>
+    <div class="bni" id="bn-myday" onclick="sv('myday')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+      <span class="bni-lbl">My Day</span>
+      <span class="bni-badge" id="td-badge" style="display:none">0</span>
+    </div>
+    <div class="bni" id="bn-projects" onclick="sv('projects')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+      <span class="bni-lbl">Mandates</span>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="movl" id="movl" style="display:none" onclick="if(event.target===this)closeModal()">
+  <div class="msheet"><div class="mhandle"></div><div id="mbody"></div></div>
+</div>
+
+<script>
+// ── PASSWORD ──────────────────────────────────────────────
+const PK='dt_pass_v2';
+let pin='',sp1='',sphase=1;
+
+function hash(s){let h=0x811c9dc5;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=(h*0x01000193)>>>0;}return h.toString(16);}
+
+function dots(n,f,err){
+  const w=document.getElementById('dots');w.innerHTML='';
+  for(let i=0;i<n;i++){const d=document.createElement('div');d.className='dot'+(i<f?(err?' e':' f'):'');w.appendChild(d);}
+}
+
+function buildNumpad(){
+  const p=document.getElementById('numpad');p.innerHTML='';
+  ['1','2','3','4','5','6','7','8','9','','0','⌫'].forEach(k=>{
+    const b=document.createElement('div');
+    b.className='nk'+(k==='⌫'?' del':k===''?' empty':'');
+    b.textContent=k;if(k!=='')b.onclick=()=>nk(k);
+    p.appendChild(b);
+  });
+}
+
+function nk(k){
+  const stored=localStorage.getItem(PK);
+  if(k==='⌫'){pin=pin.slice(0,-1);dots(6,pin.length,false);return;}
+  pin+=k;dots(6,pin.length,false);
+  if(!stored){
+    if(sphase===1&&pin.length===6){sp1=pin;pin='';sphase=2;document.getElementById('lk-lbl').textContent='Confirm your password';dots(6,0,false);}
+    else if(sphase===2&&pin.length===6){
+      if(pin===sp1){localStorage.setItem(PK,hash(pin));pin='';unlock();}
+      else{
+        document.getElementById('lk-err').textContent='Passwords do not match.';
+        dots(6,6,true);
+        setTimeout(()=>{pin='';sp1='';sphase=1;dots(6,0,false);document.getElementById('lk-lbl').textContent='Create a password';document.getElementById('lk-err').textContent='';},900);
+      }
+    }
+  } else {
+    if(pin.length===6){
+      if(hash(pin)===stored){unlock();}
+      else{document.getElementById('lk-err').textContent='Incorrect password.';dots(6,6,true);setTimeout(()=>{pin='';dots(6,0,false);document.getElementById('lk-err').textContent='';},700);}
+    }
+  }
+}
+
+function initLock(){
+  buildNumpad();
+  const stored=localStorage.getItem(PK);
+  if(!stored){document.getElementById('lk-lbl').textContent='Create a 6-digit password';document.getElementById('lk-hint').innerHTML='Set once. Stored only on this device.<br/>Nothing is sent to any server.';}
+  else{document.getElementById('lk-lbl').textContent='Enter your password';document.getElementById('lk-hint').innerHTML='Your data never leaves this device.';}
+  dots(6,0,false);
+}
+
+function unlock(){pin='';sp1='';sphase=1;document.getElementById('lock').style.display='none';document.getElementById('app').classList.add('show');initApp();}
+function lockApp(){document.getElementById('app').classList.remove('show');document.getElementById('lock').style.display='flex';initLock();}
+
+// ── PERSISTENCE ─────────────────────────────────────────
+const DATA_KEY='dt_data_v3';
+
+function saveData(){
+  try{localStorage.setItem(DATA_KEY,JSON.stringify({projects:S.projects,gTodos:S.gTodos,banner:S.banner,syncCfg:S.syncCfg}));}
+  catch(e){console.warn('Save failed',e);}
+}
+
+function loadData(){
+  try{
+    const raw=localStorage.getItem(DATA_KEY);
+    if(raw){const d=JSON.parse(raw);return d;}
+  }catch(e){console.warn('Load failed',e);}
+  return null;
+}
+
+// ── CLOUD SYNC (via sync key) ────────────────────────────
+// Uses JSONBin.io as a free cloud store — user sets their own bin ID + API key
+// No server required; user owns the data bin.
+let syncTimer=null;
+
+async function cloudPush(){
+  if(!S.syncCfg||!S.syncCfg.binId||!S.syncCfg.apiKey)return false;
+  try{
+    const payload={projects:S.projects,gTodos:S.gTodos,ts:Date.now()};
+    const r=await fetch(`https://api.jsonbin.io/v3/b/${S.syncCfg.binId}`,{
+      method:'PUT',headers:{'Content-Type':'application/json','X-Master-Key':S.syncCfg.apiKey},
+      body:JSON.stringify(payload)
+    });
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    S.syncCfg.lastSync=new Date().toISOString();
+    saveData();
+    return true;
+  }catch(e){console.warn('Push failed',e);return false;}
+}
+
+async function cloudPull(){
+  if(!S.syncCfg||!S.syncCfg.binId||!S.syncCfg.apiKey)return false;
+  try{
+    const r=await fetch(`https://api.jsonbin.io/v3/b/${S.syncCfg.binId}/latest`,{
+      headers:{'X-Master-Key':S.syncCfg.apiKey}
+    });
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const data=await r.json();
+    const rec=data.record;
+    if(rec&&rec.ts){
+      S.projects=rec.projects||[];
+      S.gTodos=rec.gTodos||[];
+      saveData();
+      render();
+      return true;
+    }
+  }catch(e){console.warn('Pull failed',e);}
+  return false;
+}
+
+function scheduleSync(){
+  if(syncTimer)clearTimeout(syncTimer);
+  syncTimer=setTimeout(async()=>{
+    await cloudPush();
+  },2000);
+}
+
+// ── EXPORT / IMPORT ───────────────────────────────────────
+function exportData(){
+  const blob=new Blob([JSON.stringify({projects:S.projects,gTodos:S.gTodos},null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download='dealtrack-export-'+today()+'.json';a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importData(e){
+  const f=e.target.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=ev=>{
+    try{
+      const d=JSON.parse(ev.target.result);
+      if(d.projects){S.projects=d.projects;S.gTodos=d.gTodos||[];saveData();render();alert('Import successful! '+d.projects.length+' mandates loaded.');}
+      else alert('Invalid file format.');
+    }catch(err){alert('Could not parse file.');}
+  };
+  r.readAsText(f);
+}
+
+// ── DATA ──────────────────────────────────────────────────
+const PC={'Preparation':'#C9A96E','Financial Model':'#A67B9E','Marketing':'#7B9E87','Due Diligence':'#6B8CAE','Negotiation':'#9B7B9E','Closing':'#AE6B6B'};
+const SC={done:{l:'Completed',c:'#7B9E87',bg:'rgba(123,158,135,0.15)'},'in-progress':{l:'In Progress',c:'#C9A96E',bg:'rgba(201,169,110,0.15)'},upcoming:{l:'Upcoming',c:'#6B8898',bg:'rgba(107,136,152,0.12)'},delayed:{l:'Delayed',c:'#AE6B6B',bg:'rgba(174,107,107,0.15)'}};
+const PR={high:{l:'High',c:'#AE6B6B',bg:'rgba(174,107,107,0.15)'},medium:{l:'Medium',c:'#C9A96E',bg:'rgba(201,169,110,0.12)'},low:{l:'Low',c:'#6B8898',bg:'rgba(107,136,152,0.10)'}};
+const CC={Advisory:'#C9A96E',Legal:'#6B8CAE',Tax:'#9B7B9E',Technology:'#AE8B6B',Expenses:'#8B9BAE'};
+
+const MST={
+  'Sell-Side M&A':[
+    {n:'Mandate Signed',ph:'Preparation',d:0,s:'done'},
+    {n:'Management Interviews',ph:'Preparation',d:7,s:'done'},
+    {n:'Historic Financials Collected',ph:'Financial Model',d:5,s:'done'},
+    {n:'Model Completed & Reviewed',ph:'Financial Model',d:28,s:'in-progress'},
+    {n:'Valuation (DCF / Comps)',ph:'Financial Model',d:31,s:'upcoming'},
+    {n:'Teaser Drafted & Approved',ph:'Marketing',d:35,s:'upcoming'},
+    {n:'Information Memorandum (IM) Drafted',ph:'Marketing',d:38,s:'upcoming'},
+    {n:'IM Approved by Management',ph:'Marketing',d:42,s:'upcoming'},
+    {n:'Process Launch / Buyer Outreach',ph:'Marketing',d:42,s:'upcoming'},
+    {n:'First-Round Bids',ph:'Marketing',d:70,s:'upcoming'},
+    {n:'Management Presentations',ph:'Due Diligence',d:91,s:'upcoming'},
+    {n:'Data Room Open',ph:'Due Diligence',d:91,s:'upcoming'},
+    {n:'Final Bids (LOI)',ph:'Due Diligence',d:112,s:'upcoming'},
+    {n:'Exclusivity Granted',ph:'Negotiation',d:119,s:'upcoming'},
+    {n:'SPA Negotiation',ph:'Negotiation',d:133,s:'upcoming'},
+    {n:'SPA Signed',ph:'Negotiation',d:147,s:'upcoming'},
+    {n:'Regulatory Clearance',ph:'Closing',d:175,s:'upcoming'},
+    {n:'Closing / Wire',ph:'Closing',d:180,s:'upcoming'},
+  ],
+  'Buy-Side M&A':[
+    {n:'Mandate Signed',ph:'Preparation',d:0,s:'done'},
+    {n:'Target Screening',ph:'Preparation',d:14,s:'done'},
+    {n:'NDA Executed',ph:'Preparation',d:21,s:'in-progress'},
+    {n:'CIM / VDD Review',ph:'Due Diligence',d:35,s:'upcoming'},
+    {n:'IOI Submitted',ph:'Due Diligence',d:49,s:'upcoming'},
+    {n:'Management Presentations',ph:'Due Diligence',d:63,s:'upcoming'},
+    {n:'Full DD Access',ph:'Due Diligence',d:77,s:'upcoming'},
+    {n:'Final Bid (LOI)',ph:'Negotiation',d:98,s:'upcoming'},
+    {n:'SPA Negotiation',ph:'Negotiation',d:120,s:'upcoming'},
+    {n:'Regulatory Filings',ph:'Closing',d:140,s:'upcoming'},
+    {n:'Closing',ph:'Closing',d:165,s:'upcoming'},
+  ],
+  'Capital Raise':[
+    {n:'Mandate Signed',ph:'Preparation',d:0,s:'done'},
+    {n:'Investment Memo Drafted',ph:'Preparation',d:14,s:'done'},
+    {n:'Investor Longlist',ph:'Marketing',d:21,s:'in-progress'},
+    {n:'Investor Outreach',ph:'Marketing',d:28,s:'upcoming'},
+    {n:'Investor Presentations',ph:'Marketing',d:42,s:'upcoming'},
+    {n:'Term Sheets Received',ph:'Negotiation',d:63,s:'upcoming'},
+    {n:'Due Diligence Period',ph:'Negotiation',d:77,s:'upcoming'},
+    {n:'Final Term Sheet / SHA',ph:'Closing',d:98,s:'upcoming'},
+    {n:'Closing / Funds Received',ph:'Closing',d:112,s:'upcoming'},
+  ]
+};
+
+// Simplified FM checklist — 5 sections, ~4 items each
+const FMCL=[
+  {s:'Data & Architecture',items:['Audited financials collected (3–5 yrs)','Management accounts & KPIs received','Model architecture & segmentation agreed','Key assumptions documented with mgmt']},
+  {s:'Revenue & Costs',items:['Revenue build by segment / geography','COGS & SG&A breakdown completed','Non-recurring & add-back items flagged','Run-rate EBITDA agreed with management']},
+  {s:'Balance Sheet & Cash Flow',items:['Working capital & NWC normalisation done','CapEx: maintenance vs. growth split','Debt, leases & cash flow waterfall built','Equity bridge (EV → equity value) ready']},
+  {s:'Projections & Scenarios',items:['Management case (3–5yr) built','Base & bear case scenarios completed','Sensitivity table on key drivers finished','EBITDA bridge prior year → current ready']},
+  {s:'Valuation & Sign-Off',items:['DCF & WACC assumptions agreed','Trading comps & precedent transactions pulled','Football field / valuation bridge slide done','Model QA, peer-reviewed & locked']},
+];
+
+const FT={
+  'Sell-Side M&A':[{n:'Retainer',cat:'Advisory',amt:50000,unit:'mo',mos:6},{n:'Success Fee',cat:'Advisory',amt:1.5,unit:'pct'},{n:'Legal Counsel',cat:'Legal',amt:350000,unit:'fix'},{n:'Tax Structuring',cat:'Tax',amt:150000,unit:'fix'},{n:'Data Room',cat:'Technology',amt:15000,unit:'fix'},{n:'Travel & Roadshow',cat:'Expenses',amt:40000,unit:'fix'}],
+  'Buy-Side M&A':[{n:'Retainer',cat:'Advisory',amt:40000,unit:'mo',mos:5},{n:'Success Fee',cat:'Advisory',amt:1.0,unit:'pct'},{n:'Legal Counsel',cat:'Legal',amt:400000,unit:'fix'},{n:'Tax Advisory',cat:'Tax',amt:120000,unit:'fix'},{n:'Travel & Expenses',cat:'Expenses',amt:30000,unit:'fix'}],
+  'Capital Raise':[{n:'Retainer',cat:'Advisory',amt:30000,unit:'mo',mos:4},{n:'Placement Fee',cat:'Advisory',amt:3.0,unit:'pct'},{n:'Legal Counsel',cat:'Legal',amt:200000,unit:'fix'},{n:'Travel & Roadshow',cat:'Expenses',amt:35000,unit:'fix'}]
+};
+
+const TT={
+  'Sell-Side M&A':[{id:'r1',role:'Managing Director',rate:3500,days:25},{id:'r2',role:'Director / VP',rate:2200,days:55},{id:'r3',role:'Associate',rate:1400,days:80},{id:'r4',role:'Analyst',rate:900,days:90}],
+  'Buy-Side M&A':[{id:'r1',role:'Managing Director',rate:3500,days:20},{id:'r2',role:'Director / VP',rate:2200,days:45},{id:'r3',role:'Associate',rate:1400,days:70},{id:'r4',role:'Analyst',rate:900,days:75}],
+  'Capital Raise':[{id:'r1',role:'Managing Director',rate:3500,days:18},{id:'r2',role:'Director / VP',rate:2200,days:35},{id:'r3',role:'Associate',rate:1400,days:50},{id:'r4',role:'Analyst',rate:900,days:55}]
+};
+
+// ── STATE ─────────────────────────────────────────────────
+let S={projects:[],gTodos:[],view:'overview',pid:null,tab:'milestones',banner:true,syncCfg:null};
+let uc=1;
+function uid(){return'u'+(Date.now())+(uc++);}
+function addDays(d,n){const x=new Date(d);x.setDate(x.getDate()+n);return x.toISOString().split('T')[0];}
+function today(){return new Date().toISOString().split('T')[0];}
+function fmt(n){return n>=1e6?'€'+(n/1e6).toFixed(2)+'M':n>=1e3?'€'+(n/1e3).toFixed(0)+'K':'€'+Math.round(n);}
+function fmtD(d){return new Date(d).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});}
+function pct(ms){return ms.length?Math.round(ms.filter(m=>m.s==='done').length/ms.length*100):0;}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+function makeProj(name,type,ev,start){
+  return{
+    id:uid(),name,type,ev:parseFloat(ev),start,
+    ms:MST[type].map((m,i)=>({id:'ms'+i,n:m.n,ph:m.ph,s:m.s,date:addDays(start,m.d),owner:'',notes:''})),
+    fees:FT[type].map((f,i)=>({...f,id:i})),
+    team:TT[type].map(r=>({...r})),
+    fmcl:type==='Sell-Side M&A'?FMCL.map(s=>({sec:s.s,items:s.items.map(n=>({id:uid(),n,done:false}))})):[],
+    todos:[],
+  };
+}
+
+function calcP(p){
+  const ret=p.fees.filter(f=>f.unit==='mo').reduce((s,f)=>s+f.amt*(f.mos||1),0);
+  const fee=p.fees.filter(f=>f.unit==='pct').reduce((s,f)=>s+(f.amt/100)*p.ev,0);
+  const rev=ret+fee;
+  const tc=p.team.reduce((s,r)=>s+r.rate*r.days,0);
+  const ec=p.fees.filter(f=>f.unit==='fix').reduce((s,f)=>s+f.amt,0);
+  const cost=tc+ec;
+  const net=rev-cost;
+  const margin=rev>0?(net/rev)*100:0;
+  return{ret,fee,rev,tc,ec,cost,net,margin};
+}
+
+function gp(){return S.projects.find(p=>p.id===S.pid);}
+function up(proj){S.projects=S.projects.map(p=>p.id===proj.id?proj:p);saveData();scheduleSync();render();}
+
+// ── INIT ──────────────────────────────────────────────────
+function initApp(){
+  // Try to load from localStorage first
+  const saved=loadData();
+  if(saved&&saved.projects&&saved.projects.length>0){
+    S.projects=saved.projects;
+    S.gTodos=saved.gTodos||[];
+    S.banner=saved.banner!==undefined?saved.banner:true;
+    S.syncCfg=saved.syncCfg||null;
+  } else {
+    // First run — seed with demo data
+    S.projects=[
+      makeProj('Meridian Healthcare GmbH','Sell-Side M&A',85000000,'2025-11-01'),
+      makeProj('Alpine Consumer Brands','Buy-Side M&A',120000000,'2025-12-15'),
+      makeProj('TechVenture Series B','Capital Raise',25000000,'2026-01-10'),
+    ];
+    S.gTodos=[];
+    saveData();
+  }
+  S.view='overview';S.pid=null;
+
+  // Auto-pull from cloud if configured
+  if(S.syncCfg&&S.syncCfg.binId){
+    cloudPull().then(ok=>{if(ok)showSyncToast('Synced from cloud ✓');});
+  }
+  render();
+}
+
+function showSyncToast(msg){
+  let t=document.getElementById('sync-toast');
+  if(!t){t=document.createElement('div');t.id='sync-toast';t.style.cssText='position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:rgba(123,158,135,.9);color:#fff;padding:8px 16px;border-radius:20px;font-size:12px;z-index:999;pointer-events:none;transition:opacity .3s';document.body.appendChild(t);}
+  t.textContent=msg;t.style.opacity='1';
+  setTimeout(()=>{t.style.opacity='0';},2500);
+}
+
+// ── ROUTING ───────────────────────────────────────────────
+function sv(v){S.view=v;if(v!=='project')S.pid=null;render();}
+function openP(id){S.pid=id;S.tab='milestones';S.view='project';render();}
+function stab(t){S.tab=t;render();}
+
+function render(){
+  updateBadge();updateTopbar();updateBnav();
+  const el=document.getElementById('content');
+  const tw=document.getElementById('tab-wrap');
+  const ab=document.getElementById('add-btn');
+  tw.style.display='none';ab.style.display='none';
+  if(S.view==='overview')rOverview(el);
+  else if(S.view==='myday')rMyDay(el);
+  else if(S.view==='projects'){ab.style.display='flex';rProjects(el);}
+  else if(S.view==='project'){tw.style.display='block';rTabs();rProject(el);}
+  else if(S.view==='sync')rSync(el);
+  document.querySelector('.scroll').scrollTop=0;
+}
+
+function updateBadge(){
+  const n=S.gTodos.filter(t=>!t.done).length+S.projects.flatMap(p=>p.todos||[]).filter(t=>!t.done).length;
+  const b=document.getElementById('td-badge');
+  if(n>0){b.textContent=n;b.style.display='block';}else b.style.display='none';
+}
+
+function updateTopbar(){
+  const t=document.getElementById('tb-title'),s=document.getElementById('tb-sub');
+  const sb=document.getElementById('sync-btn');
+  if(S.view==='project'&&S.pid){const p=gp();t.textContent=p.name;s.textContent=p.type+' · '+fmt(p.ev);}
+  else if(S.view==='myday'){t.textContent='My Day';s.textContent=new Date().toLocaleDateString('en-GB',{weekday:'long',month:'long',day:'numeric'});}
+  else if(S.view==='projects'){t.textContent='Mandates';s.textContent=S.projects.length+' active mandates';}
+  else if(S.view==='sync'){t.textContent='Sync & Settings';s.textContent='Data management';}
+  else{t.textContent='DealTrack';s.innerHTML='M&amp;A Advisory Suite';}
+  if(sb)sb.style.color=S.syncCfg&&S.syncCfg.binId?'var(--gr)':'var(--mu)';
+}
+
+function updateBnav(){
+  ['overview','myday','projects'].forEach(v=>document.getElementById('bn-'+v)?.classList.toggle('on',S.view===v||(v==='projects'&&S.view==='project')));
+}
+
+// ── SYNC PAGE ─────────────────────────────────────────────
+function rSync(el){
+  const cfg=S.syncCfg||{};
+  const hasSync=!!(cfg.binId&&cfg.apiKey);
+  let h=`<div class="card"><div class="ctitle">📱 Install as App</div>
+    <div style="font-size:13px;color:var(--mu);line-height:1.7;margin-bottom:12px">
+      <strong style="color:var(--tx)">On iPhone / iPad (Safari):</strong><br>
+      Tap the Share button → "Add to Home Screen" → Add.<br>DealTrack opens as a full-screen app.<br><br>
+      <strong style="color:var(--tx)">On Mac (Safari or Chrome):</strong><br>
+      File → "Add to Dock" (Safari) or click the install icon in the address bar (Chrome).<br><br>
+      <strong style="color:var(--tx)">On Android (Chrome):</strong><br>
+      Tap ⋮ → "Add to Home Screen".
+    </div>
+  </div>`;
+
+  h+=`<div class="card"><div class="ctitle" style="display:flex;justify-content:space-between;align-items:center">☁️ Cloud Sync <span style="font-size:10px;font-weight:400;color:var(--mu);background:rgba(201,169,110,.1);padding:3px 8px;border-radius:8px;border:1px solid rgba(201,169,110,.2)">Optional</span></div>
+    <div style="font-size:12.5px;color:var(--mu);line-height:1.7;margin-bottom:14px">
+      Sync across all your devices for free using <strong style="color:var(--tx)">JSONBin.io</strong>.<br>
+      1. Go to <a href="https://jsonbin.io" target="_blank" style="color:var(--gold)">jsonbin.io</a> → Create free account<br>
+      2. Create a new Bin (Private) → copy the Bin ID<br>
+      3. Go to API Keys → copy your Master Key<br>
+      4. Paste both below and tap Save & Sync
+    </div>
+    ${hasSync?`<div class="sbanner ok" style="margin-bottom:12px">✓ Cloud sync active · Last sync: ${cfg.lastSync?new Date(cfg.lastSync).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}):'Never'}</div>`:''}
+    <div class="fg"><label class="fl">JSONBin Bin ID</label>
+      <input class="finp" id="sync-binid" placeholder="e.g. 64a3f9..." value="${esc(cfg.binId||'')}"/>
+    </div>
+    <div class="fg"><label class="fl">Master API Key</label>
+      <input class="finp" id="sync-apikey" type="password" placeholder="$2a$10$..." value="${esc(cfg.apiKey||'')}"/>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button class="btn-p" onclick="saveSyncCfg()" style="flex:2">Save & Sync Now</button>
+      ${hasSync?`<button class="btn-s" onclick="pullSync()" style="flex:1">Pull ↓</button>`:''}
+    </div>
+    ${hasSync?`<button onclick="clearSyncCfg()" style="background:none;border:none;color:var(--re);font-size:12px;margin-top:10px;cursor:pointer;width:100%;text-align:center">Remove sync configuration</button>`:''}
+  </div>`;
+
+  h+=`<div class="card"><div class="ctitle">💾 Manual Backup</div>
+    <div style="font-size:12.5px;color:var(--mu);margin-bottom:14px;line-height:1.6">
+      Export your data as a JSON file to back up or transfer to another device. Import to restore.
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn-p" onclick="exportData()">Export JSON</button>
+      <button class="btn-s" onclick="document.getElementById('import-file').click()">Import JSON</button>
+    </div>
+    <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(event)"/>
+  </div>`;
+
+  h+=`<div class="card"><div class="ctitle">⚙️ Data Management</div>
+    <div style="font-size:12.5px;color:var(--mu);margin-bottom:14px">Data is stored locally on this device. Changing your password does not affect stored data.</div>
+    <button onclick="resetPassword()" style="background:none;border:1px solid var(--bd);border-radius:8px;padding:9px 14px;color:var(--mu);font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;width:100%;margin-bottom:8px">Change Password</button>
+    <button onclick="confirmWipe()" style="background:none;border:1px solid rgba(174,107,107,.3);border-radius:8px;padding:9px 14px;color:var(--re);font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;width:100%">⚠ Wipe All Data</button>
+  </div>`;
+
+  el.innerHTML=h;
+}
+
+async function saveSyncCfg(){
+  const binId=document.getElementById('sync-binid').value.trim();
+  const apiKey=document.getElementById('sync-apikey').value.trim();
+  if(!binId||!apiKey){alert('Please enter both Bin ID and API Key.');return;}
+  S.syncCfg={binId,apiKey,lastSync:null};
+  saveData();
+  const ok=await cloudPush();
+  if(ok){showSyncToast('Synced to cloud ✓');render();}
+  else{alert('Sync failed. Check your Bin ID and API Key.');}
+}
+
+async function pullSync(){
+  const ok=await cloudPull();
+  if(ok)showSyncToast('Data pulled from cloud ✓');
+  else alert('Pull failed. Check connection and credentials.');
+}
+
+function clearSyncCfg(){
+  if(!confirm('Remove cloud sync configuration?'))return;
+  S.syncCfg=null;saveData();render();
+}
+
+function resetPassword(){
+  if(!confirm('Reset your password? You will be logged out.'))return;
+  localStorage.removeItem(PK);lockApp();
+}
+
+function confirmWipe(){
+  if(!confirm('⚠ Permanently delete ALL data? This cannot be undone.'))return;
+  if(!confirm('Are you sure? All mandates and to-dos will be lost.'))return;
+  localStorage.removeItem(DATA_KEY);localStorage.removeItem(PK);location.reload();
+}
+
+// ── OVERVIEW ──────────────────────────────────────────────
+function rOverview(el){
+  const tev=S.projects.reduce((s,p)=>s+p.ev,0);
+  const trev=S.projects.reduce((s,p)=>s+calcP(p).rev,0);
+  const tnet=S.projects.reduce((s,p)=>s+calcP(p).net,0);
+  const otd=S.gTodos.filter(t=>!t.done).length+S.projects.flatMap(p=>p.todos||[]).filter(t=>!t.done).length;
+  const ok=tnet>=0;
+  let h='';
+  if(S.banner)h+=`<div class="ibanner" id="ibanner"><div style="font-size:18px;flex-shrink:0">📱</div><div class="ibanner-txt"><strong style="color:var(--gold)">Install + Sync</strong><br>Add to Home Screen on mobile. Use the ⟳ button to set up cross-device sync.</div><button class="ibanner-x" onclick="S.banner=false;saveData();document.getElementById('ibanner').remove()">×</button></div>`;
+  h+=`<div class="g2">
+    <div class="kpi"><div class="kl">Total EV</div><div class="kv" style="font-size:19px">${fmt(tev)}</div><div class="ks">${S.projects.length} mandates</div></div>
+    <div class="kpi"><div class="kl">Est. Revenue</div><div class="kv" style="font-size:19px;color:var(--gold)">${fmt(trev)}</div><div class="ks">Retainer + fees</div></div>
+    <div class="kpi"><div class="kl">Portfolio P&L</div><div class="kv" style="font-size:19px;color:${ok?'var(--gr)':'var(--re)'}">${fmt(Math.abs(tnet))}</div><div class="ks">${ok?'Net profit':'Net loss'}</div></div>
+    <div class="kpi"><div class="kl">Open To-Dos</div><div class="kv" style="font-size:19px">${otd}</div><div class="ks">All + personal</div></div>
+  </div>`;
+  h+=`<div class="card"><div class="ctitle">Mandate Profitability</div>`;
+  S.projects.forEach(p=>{
+    const pr=calcP(p),pp=pct(p.ms),ok2=pr.net>=0;
+    h+=`<div style="margin-bottom:16px;cursor:pointer" onclick="openP('${p.id}')">
+      <div style="display:flex;justify-content:space-between;margin-bottom:3px">
+        <span style="font-size:13px;font-weight:500">${esc(p.name)}</span>
+        <span style="font-size:11px;font-weight:600;color:${ok2?'var(--gr)':'var(--re)'}">
+          ${ok2?'▲':'▼'} ${fmt(Math.abs(pr.net))}
+        </span>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:5px">
+        <span style="font-size:11px;color:var(--mu)">${p.type}</span>
+        <span style="font-size:11px;color:var(--mu)">${pr.margin.toFixed(1)}% margin · ${pp}% done</span>
+      </div>
+      <div class="pbar"><div class="pfill" style="width:${pp}%"></div></div>
+    </div>`;
+  });
+  h+=`</div>`;
+  const ams=S.projects.flatMap(p=>p.ms.filter(m=>m.s==='in-progress'||m.s==='delayed').map(m=>({...m,pn:p.name,pid:p.id})));
+  if(ams.length){
+    h+=`<div class="card"><div class="ctitle">Active Milestones</div>`;
+    ams.forEach(m=>{const sc=SC[m.s];h+=`<div style="display:flex;align-items:center;gap:9px;padding:9px 0;border-bottom:1px solid var(--bd);cursor:pointer" onclick="openP('${m.pid}')">
+      <div style="width:7px;height:7px;border-radius:50%;background:${sc.c};flex-shrink:0"></div>
+      <div style="flex:1;min-width:0"><div style="font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(m.n)}</div><div style="font-size:11px;color:var(--mu)">${esc(m.pn)}</div></div>
+      <span class="badge" style="background:${sc.bg};color:${sc.c};border:1px solid ${sc.c}44;font-size:10px">${sc.l}</span>
+    </div>`;});
+    h+=`</div>`;
+  }
+  el.innerHTML=h;
+}
+
+// ── PROJECT LIST ──────────────────────────────────────────
+function rProjects(el){
+  let h='';
+  S.projects.forEach(p=>{
+    const pp=pct(p.ms),pr=calcP(p),ok=pr.net>=0;
+    h+=`<div class="proj-card" onclick="openP('${p.id}')">
+      <div class="proj-nm">${esc(p.name)}</div>
+      <div class="proj-meta"><span>${p.type}</span><span>${fmt(p.ev)}</span></div>
+      <div class="pbar"><div class="pfill" style="width:${pp}%"></div></div>
+      <div class="pprofit" style="color:${ok?'var(--gr)':'var(--re)'}">
+        ${ok?'▲ Profitable':'▼ Loss-Making'} · ${fmt(Math.abs(pr.net))} net · ${pr.margin.toFixed(1)}%
+      </div>
+    </div>`;
+  });
+  if(!S.projects.length)h=`<div class="empty">No mandates yet.<br>Tap + to create your first mandate.</div>`;
+  el.innerHTML=h;
+}
+
+// ── PROJECT TABS ──────────────────────────────────────────
+function rTabs(){
+  const p=gp();if(!p)return;
+  const ot=p.todos.filter(t=>!t.done).length;
+  const tabs=[
+    {k:'milestones',l:'Milestones'},
+    ...(p.type==='Sell-Side M&A'?[{k:'finmodel',l:'Fin Model'}]:[]),
+    {k:'gantt',l:'Gantt'},
+    {k:'budget',l:'Budget & P&L'},
+    {k:'todos',l:'To-Dos'+(ot?' ('+ot+')':'')},
+  ];
+  document.getElementById('tab-row').innerHTML=tabs.map(t=>`<button class="tbtn ${S.tab===t.k?'on':''}" onclick="stab('${t.k}')">${t.l}</button>`).join('');
+}
+
+// ── PROJECT ROUTER ────────────────────────────────────────
+function rProject(el){
+  const p=gp();if(!p){el.innerHTML='';return;}
+  const back=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+    <div class="back-btn" onclick="sv('projects')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>Back to Mandates</div>
+    <button class="delete-proj-btn" onclick="deleteProj('${p.id}')">Delete</button>
+  </div>`;
+  if(S.tab==='milestones')rMilestones(el,p,back);
+  else if(S.tab==='finmodel')rFinModel(el,p,back);
+  else if(S.tab==='gantt')rGantt(el,p,back);
+  else if(S.tab==='budget')rBudget(el,p,back);
+  else if(S.tab==='todos')rTodos(el,p,back);
+}
+
+function deleteProj(pid){
+  if(!confirm('Delete this mandate? This cannot be undone.'))return;
+  S.projects=S.projects.filter(p=>p.id!==pid);
+  saveData();scheduleSync();
+  sv('projects');
+}
+
+// ── MILESTONES ────────────────────────────────────────────
+function rMilestones(el,p,back){
+  const pp=pct(p.ms);
+  const phases=[...new Set(p.ms.map(m=>m.ph))];
+  let h=back+`<div style="display:flex;align-items:center;gap:12px;padding:13px;background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);margin-bottom:14px">
+    ${ring(pp,58,'#C9A96E')}
+    <div>${Object.entries(SC).map(([k,v])=>{const c=p.ms.filter(m=>m.s===k).length;return c?`<span class="badge" style="background:${v.bg};color:${v.c};border:1px solid ${v.c}33;font-size:10px;margin:2px">${c} ${v.l}</span>`:''}).join('')}</div>
+  </div>`;
+  phases.forEach(ph=>{
+    h+=`<div class="ph-hdr"><div class="ph-dot" style="background:${PC[ph]||'#C9A96E'}"></div><div class="ph-nm">${ph}</div></div>`;
+    p.ms.filter(m=>m.ph===ph).forEach(m=>{
+      const sc=SC[m.s],sym=m.s==='done'?'✓':m.s==='in-progress'?'→':m.s==='delayed'?'!':'○';
+      h+=`<div class="ms-item">
+        <div class="ms-dot" style="background:${sc.bg};border-color:${sc.c};color:${sc.c}">${sym}</div>
+        <div class="ms-body">
+          <div class="ms-nm">${esc(m.n)}</div>
+          <div class="ms-dt">📅 ${fmtD(m.date)}${m.owner?' · 👤 '+esc(m.owner):''}</div>
+          <input type="date" class="date-inp" value="${m.date}" onchange="updMS('${p.id}','${m.id}','date',this.value)" title="Change date"/>
+          <select class="sel" onchange="updMS('${p.id}','${m.id}','s',this.value)">
+            ${Object.entries(SC).map(([k,v])=>`<option value="${k}"${m.s===k?' selected':''}>${v.l}</option>`).join('')}
+          </select>
+          <input class="inp" placeholder="Assignee" value="${esc(m.owner||'')}" onchange="updMS('${p.id}','${m.id}','owner',this.value)"/>
+        </div>
+      </div>`;
+    });
+  });
+  el.innerHTML=h;
+}
+
+function updMS(pid,mid,f,v){
+  const p=S.projects.find(x=>x.id===pid);if(!p)return;
+  p.ms=p.ms.map(m=>m.id===mid?{...m,[f]:v}:m);
+  S.projects=S.projects.map(x=>x.id===pid?p:x);
+  saveData();scheduleSync();
+  updateBadge();rTabs();
+  // Update the milestone display area without full re-render for status/owner changes
+  if(f==='date'){
+    // Update the date display text
+    const allDts=document.querySelectorAll('.ms-dt');
+    // re-render just the milestones tab content
+    rProject(document.getElementById('content'));
+  }
+}
+
+// ── FIN MODEL ─────────────────────────────────────────────
+function rFinModel(el,p,back){
+  const cl=p.fmcl||[];
+  const all=cl.flatMap(s=>s.items),done=all.filter(i=>i.done).length;
+  const pp=all.length?Math.round(done/all.length*100):0;
+  let h=back+`<div style="display:flex;align-items:center;gap:12px;padding:13px;background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);margin-bottom:12px">
+    ${ring(pp,58,'#A67B9E')}
+    <div><div style="font-family:'Playfair Display',serif;font-size:15px">FM Checklist</div><div style="font-size:12px;color:var(--mu);margin-top:3px">${done} of ${all.length} complete</div></div>
+  </div>
+  <div class="pbar2" style="margin-bottom:14px"><div class="pfill2" style="width:${pp}%;background:var(--fm)"></div></div>`;
+  cl.forEach((sec,si)=>{
+    const sd=sec.items.filter(i=>i.done).length;
+    h+=`<div class="fm-st">${sec.sec} — ${sd}/${sec.items.length}</div>`;
+    sec.items.forEach(item=>{
+      h+=`<div class="fmi" onclick="togFM('${p.id}',${si},'${item.id}')">
+        <div class="fmcb ${item.done?'on':''}">${item.done?'<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>':''}</div>
+        <span class="fmtx ${item.done?'dn':''}">${esc(item.n)}</span>
+      </div>`;
+    });
+  });
+  el.innerHTML=h;
+}
+
+function togFM(pid,si,iid){
+  const p=S.projects.find(x=>x.id===pid);if(!p)return;
+  p.fmcl=p.fmcl.map((s,i)=>i!==si?s:{...s,items:s.items.map(it=>it.id===iid?{...it,done:!it.done}:it)});
+  S.projects=S.projects.map(x=>x.id===pid?p:x);
+  saveData();scheduleSync();
+  rProject(document.getElementById('content'));
+}
+
+// ── GANTT ─────────────────────────────────────────────────
+function rGantt(el,p,back){
+  const start=new Date(p.start);
+  const last=p.ms[p.ms.length-1];
+  const end=new Date(p.start);end.setDate(end.getDate()+last.d+30);
+  const td=Math.round((end-start)/86400000);
+  const months=[];let c=new Date(start.getFullYear(),start.getMonth(),1);
+  while(c<=end){months.push(new Date(c));c=new Date(c.getFullYear(),c.getMonth()+1,1);}
+  const gl=d=>Math.max(0,Math.min(100,(Math.round((new Date(d)-start)/86400000)/td)*100));
+  const phases=[...new Set(p.ms.map(m=>m.ph))];
+  let h=back+`<div class="card"><div class="ctitle">Gantt Chart</div><div class="gwrap">
+    <div class="ghdr"><div class="ghlbl">Milestone</div><div class="ghmos">${months.map(m=>`<div class="ghmo">${m.toLocaleDateString('en-GB',{month:'short',year:'2-digit'})}</div>`).join('')}</div></div>`;
+  phases.forEach(ph=>{
+    h+=`<div class="gph" style="color:${PC[ph]||'var(--gold)'}">${ph}</div>`;
+    p.ms.filter(m=>m.ph===ph).forEach(m=>{
+      h+=`<div class="grow"><div class="gnm">${esc(m.n)}</div><div class="garea"><div class="gbar" style="left:${gl(m.date)}%;width:1.5%;min-width:5px;background:${SC[m.s].c};opacity:${m.s==='upcoming'?.38:1}"></div></div></div>`;
+    });
+  });
+  h+=`</div></div>`;
+  el.innerHTML=h;
+}
+
+// ── BUDGET ────────────────────────────────────────────────
+function rBudget(el,p,back){
+  const pr=calcP(p),ok=pr.net>=0,mp=Math.min(Math.max(pr.margin,0),100);
+  let h=back;
+  h+=`<div class="card"><div class="ctitle">P&L Summary</div>
+  <div class="g2">
+    <div class="bkpi"><div class="bkl">Revenue</div><div class="bkv" style="color:var(--gold)">${fmt(pr.rev)}</div></div>
+    <div class="bkpi"><div class="bkl">Net Profit</div><div class="bkv" style="color:${ok?'var(--gr)':'var(--re)'}">${fmt(pr.net)}</div></div>
+    <div class="bkpi"><div class="bkl">Advisor Cost</div><div class="bkv" style="color:var(--re)">${fmt(pr.tc)}</div></div>
+    <div class="bkpi"><div class="bkl">External Cost</div><div class="bkv" style="color:var(--re)">${fmt(pr.ec)}</div></div>
+  </div>
+  <span class="profit-chip" style="background:${ok?'rgba(123,158,135,.15)':'rgba(174,107,107,.15)'};color:${ok?'var(--gr)':'var(--re)'}">
+    ${ok?'✓ Profitable':'✗ Loss-Making'} · ${pr.margin.toFixed(1)}% margin
+  </span>
+  <div class="pbar" style="margin-top:10px"><div class="pfill" style="width:${mp}%;background:${ok?'var(--gr)':'var(--re)'}"></div></div>
+  </div>`;
+
+  h+=`<div class="card"><div class="ctitle">Transaction Value</div>
+  <input class="inp" type="number" value="${p.ev}" onchange="updEV('${p.id}',this.value)" style="font-size:16px"/>
+  </div>`;
+
+  h+=`<div class="card"><div class="ctitle">Revenue</div>`;
+  p.fees.filter(f=>f.unit==='mo').forEach(f=>{
+    h+=`<div class="fee-row">
+      <div class="fee-nm">${esc(f.n)}<br><span style="font-size:11px;color:var(--mu)">monthly × months</span></div>
+      <div style="display:flex;gap:5px;align-items:center">
+        <input class="ti" style="width:80px" type="number" value="${f.amt}" onchange="updFee('${p.id}',${f.id},'amt',this.value)"/>
+        <span style="font-size:11px;color:var(--mu)">×</span>
+        <input class="ti" style="width:50px" type="number" value="${f.mos||0}" onchange="updFee('${p.id}',${f.id},'mos',this.value)"/>
+      </div>
+    </div>`;
+  });
+  p.fees.filter(f=>f.unit==='pct').forEach(f=>{
+    h+=`<div class="fee-row">
+      <div class="fee-nm">${esc(f.n)}<br><span style="font-size:11px;color:var(--mu)">% of EV = ${fmt((f.amt/100)*p.ev)}</span></div>
+      <div style="display:flex;gap:5px;align-items:center">
+        <input class="ti" style="width:72px" type="number" value="${f.amt}" step="0.1" onchange="updFee('${p.id}',${f.id},'amt',this.value)"/>
+        <span style="font-size:11px;color:var(--mu)">%</span>
+      </div>
+    </div>`;
+  });
+  h+=`<div class="fee-row" style="border-top:1px solid var(--bd2)"><div class="fee-nm" style="font-weight:600">Total Revenue</div><div class="fee-val">${fmt(pr.rev)}</div></div></div>`;
+
+  h+=`<div class="card"><div class="ctitle" style="display:flex;justify-content:space-between;align-items:center">
+    <span>Advisor Day Rates</span>
+    <button onclick="addTeam('${p.id}')" style="background:none;border:1px solid var(--bd);border-radius:8px;padding:5px 10px;color:var(--mu);font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer">+ Add</button>
+  </div>`;
+  p.team.forEach(r=>{
+    h+=`<div class="team-row">
+      <div style="flex:1;font-size:13px">${esc(r.role)}</div>
+      <div style="display:flex;gap:5px;align-items:center">
+        <input class="ti" style="width:72px" type="number" value="${r.rate}" onchange="updTeam('${p.id}','${r.id}','rate',this.value)" title="Day rate €"/>
+        <span style="font-size:11px;color:var(--mu)">×</span>
+        <input class="ti" style="width:50px" type="number" value="${r.days}" onchange="updTeam('${p.id}','${r.id}','days',this.value)" title="Days"/>
+        <span style="font-size:12px;color:var(--re);min-width:52px;text-align:right">${fmt(r.rate*r.days)}</span>
+        <button onclick="rmTeam('${p.id}','${r.id}')" style="background:none;border:none;color:var(--mu2);font-size:17px;cursor:pointer;padding:2px">×</button>
+      </div>
+    </div>`;
+  });
+  h+=`<div class="fee-row" style="border-top:1px solid var(--bd2)"><div class="fee-nm" style="font-weight:600">Total Advisor</div><div style="font-family:'Playfair Display',serif;font-size:15px;color:var(--re)">${fmt(pr.tc)}</div></div></div>`;
+
+  h+=`<div class="card"><div class="ctitle">External Costs</div>`;
+  p.fees.filter(f=>f.unit==='fix').forEach(f=>{
+    h+=`<div class="fee-row">
+      <div class="fee-nm">${esc(f.n)}<br><span style="font-size:10px;color:${CC[f.cat]||'var(--mu)'}">${f.cat}</span></div>
+      <input class="ti" style="width:100px" type="number" value="${f.amt}" onchange="updFee('${p.id}',${f.id},'amt',this.value)"/>
+    </div>`;
+  });
+  h+=`<div class="fee-row" style="border-top:1px solid var(--bd2)"><div class="fee-nm" style="font-weight:600">Total External</div><div style="font-family:'Playfair Display',serif;font-size:15px;color:var(--re)">${fmt(pr.ec)}</div></div></div>`;
+
+  h+=`<div class="card"><div class="ctitle">Sensitivity Analysis</div>`;
+  [0.75,1.0,1.25,1.5,2.0].forEach(mult=>{
+    const sev=p.ev*mult;
+    const srev=p.fees.filter(f=>f.unit==='mo').reduce((s,f)=>s+f.amt*(f.mos||1),0)+p.fees.filter(f=>f.unit==='pct').reduce((s,f)=>s+(f.amt/100)*sev,0);
+    const snet=srev-pr.cost;const sm=srev>0?(snet/srev)*100:0;const ok2=snet>=0;
+    h+=`<div class="fee-row">
+      <div><div style="font-size:12.5px">${mult===1?'Base Case':mult<1?'Bear (−25%)':'×'+mult+' EV'}</div><div style="font-size:11px;color:var(--mu)">${fmt(sev)}</div></div>
+      <div style="text-align:right"><div style="font-size:13px;font-weight:600;color:${ok2?'var(--gr)':'var(--re)'}"> ${ok2?'▲':'▼'} ${fmt(Math.abs(snet))}</div><div style="font-size:11px;color:var(--mu)">${sm.toFixed(1)}%</div></div>
+    </div>`;
+  });
+  h+=`</div>`;
+  el.innerHTML=h;
+}
+
+function updEV(pid,v){const p=S.projects.find(x=>x.id===pid);if(!p)return;p.ev=parseFloat(v)||0;S.projects=S.projects.map(x=>x.id===pid?p:x);saveData();scheduleSync();rProject(document.getElementById('content'));}
+function updFee(pid,fid,f,v){const p=S.projects.find(x=>x.id===pid);if(!p)return;p.fees=p.fees.map(x=>x.id===fid?{...x,[f]:parseFloat(v)||0}:x);S.projects=S.projects.map(x=>x.id===pid?p:x);saveData();scheduleSync();rProject(document.getElementById('content'));}
+function updTeam(pid,rid,f,v){const p=S.projects.find(x=>x.id===pid);if(!p)return;p.team=p.team.map(r=>r.id===rid?{...r,[f]:parseFloat(v)||0}:r);S.projects=S.projects.map(x=>x.id===pid?p:x);saveData();scheduleSync();rProject(document.getElementById('content'));}
+function addTeam(pid){const p=S.projects.find(x=>x.id===pid);if(!p)return;p.team.push({id:uid(),role:'New Role',rate:1500,days:0});S.projects=S.projects.map(x=>x.id===pid?p:x);saveData();scheduleSync();rProject(document.getElementById('content'));}
+function rmTeam(pid,rid){const p=S.projects.find(x=>x.id===pid);if(!p)return;p.team=p.team.filter(r=>r.id!==rid);S.projects=S.projects.map(x=>x.id===pid?p:x);saveData();scheduleSync();rProject(document.getElementById('content'));}
+
+// ── TODOS ─────────────────────────────────────────────────
+function rTodos(el,p,back){
+  el.innerHTML=back+todoInput('proj')+todoList(p.todos,false);
+}
+
+function rMyDay(el){
+  const due=S.projects.flatMap(p=>(p.todos||[]).filter(t=>!t.done&&t.dueDate&&t.dueDate<=today()).map(t=>({...t,_pn:p.name,_pid:p.id})));
+  let h=`<div class="card"><div class="ctitle">Personal To-Dos</div>${todoInput('g')}${todoList(S.gTodos,false)}</div>`;
+  h+=`<div class="card"><div class="ctitle">Due Today — From Projects</div>`;
+  if(!due.length)h+=`<div class="empty" style="padding:20px">No project to-dos due today. ✓</div>`;
+  due.forEach(t=>{h+=tdItem(t,true);});
+  h+=`</div>`;
+  el.innerHTML=h;
+}
+
+function todoInput(ctx){
+  return`<div class="todo-wrap">
+    <div class="todo-row">
+      <input class="todo-inp" id="ti-${ctx}" placeholder="Add a to-do…" onkeydown="if(event.key==='Enter')addTD('${ctx}')"/>
+      <button class="todo-add" onclick="addTD('${ctx}')">Add</button>
+    </div>
+    <div class="todo-sels">
+      <select class="tsel" id="tp-${ctx}">
+        <option value="high">🔴 High</option>
+        <option value="medium" selected>🟡 Medium</option>
+        <option value="low">🟢 Low</option>
+      </select>
+      <input type="date" class="tsel" id="td-${ctx}" value="${today()}"/>
+    </div>
+  </div>`;
+}
+
+function todoList(todos,showTag){
+  const open=todos.filter(t=>!t.done).sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0));
+  const done=todos.filter(t=>t.done);
+  let h='';
+  if(!open.length)h+=`<div class="empty" style="padding:16px">No open to-dos. 🎉</div>`;
+  open.forEach(t=>{h+=tdItem(t,showTag);});
+  if(done.length){h+=`<div class="sec-lbl">Completed (${done.length})</div>`;done.forEach(t=>{h+=tdItem(t,showTag);});}
+  return h;
+}
+
+function tdItem(t,showTag){
+  const p=PR[t.priority]||PR.medium,od=t.dueDate&&!t.done&&t.dueDate<today();
+  return`<div class="td-item ${t.done?'fd':''}" style="border-left-color:${p.c}">
+    <div class="td-chk ${t.done?'on':''}" onclick="togTD('${t.id}','${t._ctx||''}')">
+      ${t.done?'<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>':''}
+    </div>
+    <div class="td-body">
+      <div class="td-tx ${t.done?'st':''}">${esc(t.text)}</div>
+      <div class="td-mt">
+        <span class="pri-b" style="background:${p.bg};color:${p.c}">${p.l}</span>
+        ${t.dueDate?`<span style="font-size:11px;color:${od?'var(--re)':'var(--mu)'}">📅 ${fmtD(t.dueDate)}${od?' ⚠':''}</span>`:''}
+        ${showTag&&t._pn?`<span class="ptag">${esc(t._pn)}</span>`:''}
+        ${t.pinned?`<span style="font-size:11px;color:var(--gold)">📌</span>`:''}
+      </div>
+    </div>
+    <button class="td-pin" style="color:${t.pinned?'var(--gold)':'var(--mu)'}" onclick="pinTD('${t.id}','${t._ctx||''}')">📌</button>
+    <button class="td-del" onclick="rmTD('${t.id}','${t._ctx||''}')">×</button>
+  </div>`;
+}
+
+function addTD(ctx){
+  const ti=document.getElementById('ti-'+ctx);if(!ti||!ti.value.trim())return;
+  const t={id:uid(),text:ti.value.trim(),done:false,priority:document.getElementById('tp-'+ctx).value,dueDate:document.getElementById('td-'+ctx).value,createdAt:today(),pinned:false,_ctx:ctx};
+  ti.value='';
+  if(ctx==='g'){S.gTodos=[t,...S.gTodos];saveData();scheduleSync();render();return;}
+  const p=gp();if(p){p.todos=[t,...p.todos];S.projects=S.projects.map(x=>x.id===p.id?p:x);saveData();scheduleSync();rTodos(document.getElementById('content'),p,'');rTabs();}
+}
+
+function togTD(id,ctx){
+  if(ctx==='g'){S.gTodos=S.gTodos.map(t=>t.id===id?{...t,done:!t.done}:t);}
+  else{
+    const p=gp()||S.projects.find(x=>x.todos.some(t=>t.id===id));
+    if(p){p.todos=p.todos.map(t=>t.id===id?{...t,done:!t.done}:t);S.projects=S.projects.map(x=>x.id===p.id?p:x);}
+  }
+  saveData();scheduleSync();render();
+}
+function rmTD(id,ctx){
+  if(ctx==='g'){S.gTodos=S.gTodos.filter(t=>t.id!==id);}
+  else{const p=gp()||S.projects.find(x=>x.todos.some(t=>t.id===id));if(p){p.todos=p.todos.filter(t=>t.id!==id);S.projects=S.projects.map(x=>x.id===p.id?p:x);}}
+  saveData();scheduleSync();render();
+}
+function pinTD(id,ctx){
+  if(ctx==='g'){S.gTodos=S.gTodos.map(t=>t.id===id?{...t,pinned:!t.pinned}:t);}
+  else{const p=gp()||S.projects.find(x=>x.todos.some(t=>t.id===id));if(p){p.todos=p.todos.map(t=>t.id===id?{...t,pinned:!t.pinned}:t);S.projects=S.projects.map(x=>x.id===p.id?p:x);}}
+  saveData();scheduleSync();render();
+}
+
+// ── NEW PROJECT MODAL ─────────────────────────────────────
+function openNewProjModal(){
+  document.getElementById('mbody').innerHTML=`
+    <div class="mtitle">New Mandate</div>
+    <div class="fg"><label class="fl">Client / Project Name</label><input class="finp" id="np-nm" placeholder="e.g. Alpine Industries GmbH"/></div>
+    <div class="fg"><label class="fl">Deal Type</label><select class="finp" id="np-tp"><option>Sell-Side M&A</option><option>Buy-Side M&A</option><option>Capital Raise</option></select></div>
+    <div class="fg"><label class="fl">Transaction Value (€)</label><input class="finp" id="np-ev" type="number" placeholder="e.g. 75000000"/></div>
+    <div class="fg"><label class="fl">Start Date</label><input class="finp" id="np-dt" type="date" value="${today()}"/></div>
+    <div class="mact">
+      <button class="btn-s" onclick="closeModal()">Cancel</button>
+      <button class="btn-p" onclick="submitProj()">Create Mandate</button>
+    </div>`;
+  document.getElementById('movl').style.display='flex';
+}
+
+function submitProj(){
+  const nm=document.getElementById('np-nm').value.trim();
+  const tp=document.getElementById('np-tp').value;
+  const ev=document.getElementById('np-ev').value;
+  const dt=document.getElementById('np-dt').value;
+  if(!nm||!ev)return;
+  const p=makeProj(nm,tp,ev,dt);
+  S.projects.push(p);
+  saveData();scheduleSync();
+  closeModal();
+  openP(p.id);
+}
+
+function closeModal(){document.getElementById('movl').style.display='none';}
+
+// ── RING SVG ──────────────────────────────────────────────
+function ring(p,sz,col){
+  const r=(sz-10)/2,c=2*Math.PI*r,off=c-(p/100)*c;
+  return`<svg width="${sz}" height="${sz}" style="flex-shrink:0">
+    <circle cx="${sz/2}" cy="${sz/2}" r="${r}" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="7"/>
+    <circle cx="${sz/2}" cy="${sz/2}" r="${r}" fill="none" stroke="${col}" stroke-width="7"
+      stroke-dasharray="${c}" stroke-dashoffset="${off}" stroke-linecap="round"
+      transform="rotate(-90 ${sz/2} ${sz/2})"/>
+    <text x="${sz/2}" y="${sz/2+5}" text-anchor="middle" fill="${col}" font-size="14" font-family="Playfair Display,serif">${p}%</text>
+  </svg>`;
+}
+
+// ── BOOT ─────────────────────────────────────────────────
+initLock();
+</script>
+</body>
+</html>
